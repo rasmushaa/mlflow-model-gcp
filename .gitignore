@@ -1,0 +1,65 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd/
+.VolumeIcon.icns
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+pip-wheel-metadata/
+wheels/
+*.whl
+
+# Virtualenvs / envs
+.env
+.env.*
+.venv/
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+.Python
+
+# Testing / coverage
+htmlcov/
+.coverage
+.coverage.*
+.cache
+.tox/
+.nox/
+.pytest_cache/
+coverage.xml
+
+# Caches / type checkers
+.mypy_cache/
+.pyre/
+.pyright/
+.pytype/
+
+# Jupyter
+.ipynb_checkpoints
+
+# IDEs / editors
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# OS / others
+Thumbs.db
+desktop.ini
