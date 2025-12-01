@@ -122,7 +122,7 @@ def classification_report_metrics(y_true: pd.Series, y_pred: pd.Series) -> tuple
     selected_metrics = ['accuracy'] + [f"{m}.{avg}" for m in ['precision', 'recall', 'f1'] for avg in ['micro', 'macro']]
 
     # Plot confusion matrix, and metrics
-    fig, axis = plt.subplots(1, 2, gridspec_kw={'width_ratios': [6, 1]}, figsize=(10, 7), dpi=160)
+    fig, axis = plt.subplots(1, 2, gridspec_kw={'width_ratios': [5, 1]}, figsize=(10, 7), dpi=160)
     plot_confusion_matrix(axis[0], y_true, y_pred)
     plot_classification_metrics(axis[1], {k: v for k, v in metrics.items() if k in selected_metrics})
     plt.tight_layout()

@@ -1,5 +1,5 @@
-from preprocessors.custom.feature_selector import FeatureSelector
-from preprocessors.custom.kbest_text_vector import KbestTextVector
+from .custom.feature_selector import FeatureSelector
+from .custom.kbest_text_vector import KbestTextVector
 
 
 def create_preprocessors(preprocessor_config: dict) -> dict:

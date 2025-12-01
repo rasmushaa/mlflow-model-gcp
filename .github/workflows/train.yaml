@@ -2,7 +2,7 @@ name: Train Model
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "not" ]
 
 jobs:
   train:

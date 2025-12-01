@@ -1,9 +1,13 @@
 import os
+import shutil
+import joblib
 from datetime import datetime
 import mlflow
 import pandas as pd
 import numpy as np
+import sklearn
 from utils.git import get_git_metadata
+from polymodel.model.wrapper import ModelWrapper
 
 
 class ExperimentManager:
@@ -114,6 +118,43 @@ class ExperimentManager:
         for name, fig in figures_dict.items():
             mlflow.log_figure(fig, f'plots/{name}.png')
 
+
+    def log_model(self, model: sklearn.base.BaseEstimator, preprocessors: dict, input_example: pd.DataFrame = None):
+        ''' Log a MLflow model artifact to the current MLflow run.
+
+        Parameters
+        ----------
+        model: sklearn.base.BaseEstimator
+            The trained model to log
+        preprocessors: dict, optional
+            A dictionary of preprocessing steps to log along with the model
+        '''
+        # Create artifacts directory if it doesn't exist
+        os.makedirs('artifacts', exist_ok=True)
+        
+        # Save model to temporary file
+        artifact_paths = {'model': 'artifacts/model.pkl'}
+        joblib.dump(model, artifact_paths['model'])
+
+        # Save preprocessors to temporary files
+        for index, preprocessor in preprocessors.items():
+            artifact_paths[f'preprocessor_{index}'] = f'artifacts/preprocessor_{index}.pkl'
+            joblib.dump(preprocessor, artifact_paths[f'preprocessor_{index}'])
+
+        wheel_src = "dist/polymodel-1.0.0-py3-none-any.whl"
+        wheel_dst = f"artifacts/{os.path.basename(wheel_src)}"
+        shutil.copy(wheel_src, wheel_dst)
+        artifact_paths['wheel'] = wheel_dst
+
+        # Log the model with artifacts (code-based model using wrapper.py)
+        mlflow.pyfunc.log_model(
+            name='model',
+            python_model="polymodel/src/polymodel/model/wrapper.py",
+            artifacts=artifact_paths,
+            #code_paths=['src/model_src/model/wrapper.py'],
+            input_example=input_example,
+            pip_requirements=[f"polymodel @ file://{{ARTIFACT_PATH}}/{os.path.basename(wheel_src)}"],
+        )
         
     def __find_or_create_experiment(self):
         ''' Find an existing MLflow experiment by name, 

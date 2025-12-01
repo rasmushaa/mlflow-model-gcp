@@ -1,11 +1,10 @@
+from data.loader import DataLoader
 from utils.mlflow import ExperimentManager
 from utils.context import Context
-from data.loader import DataLoader
-from models.factory import create_model
-from preprocessors.factory import create_preprocessors
 from utils.ml.metrics import classification_report_metrics, prediction_report_metrics
 from utils.ml.processing import split_data
-
+from polymodel.model.factory import create_model
+from polymodel.preprocessor.factory import create_preprocessors
 
 
 def main():
@@ -13,6 +12,7 @@ def main():
     context = Context()
     manager = ExperimentManager()
     loader = DataLoader(**context.config['query'])
+
 
     with manager.start_run():
 
@@ -54,7 +54,8 @@ def main():
         manager.log_metrics(metrics)
         manager.log_figures(plots)
 
-
+        # Log model with preprocessors
+        manager.log_model(model, preprocessors, input_example=X_train.iloc[:1, :])
 
 
 if __name__ == "__main__":

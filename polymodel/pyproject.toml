@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "polymodel"
+version = "1.0.0"
+description = "Standalone ML model package with support for X-model, and N-preprocessor pipeline."
+requires-python = ">=3.13"
+dependencies = [
+    "mlflow>=3.6.0",
+    "numpy>=2.3.4",
+    "pandas>=2.3.3",
+    "scikit-learn>=1.7.2",
+    "joblib>=1.4.2",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["polymodel*"]
