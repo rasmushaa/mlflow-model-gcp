@@ -5,9 +5,7 @@ from datetime import datetime
 import mlflow
 import pandas as pd
 import numpy as np
-import sklearn
 from utils.git import get_git_metadata
-from polymodel.model.wrapper import ModelWrapper
 
 
 class ExperimentManager:
@@ -107,6 +105,32 @@ class ExperimentManager:
         mlflow.log_input(df, name)
 
 
+    def log_text(self, text: str, name: str):
+        ''' Log a text artifact to the current MLflow run.
+
+        Parameters
+        ----------
+        text: str
+            The text content to log
+        name: str
+            The name of the logged text artifact
+        '''
+        mlflow.log_text(text, f'text/{name}.txt')
+
+
+    def log_dict(self, data_dict: dict, name: str):
+        ''' Log a dictionary artifact to the current MLflow run.
+
+        Parameters
+        ----------
+        data_dict: dict
+            The dictionary to log
+        name: str
+            The name of the logged dictionary artifact
+        '''
+        mlflow.log_dict(data_dict, f'dict/{name}.json')
+
+
     def log_figures(self, figures_dict: dict):
         ''' Log a matplotlib figure artifact to the current MLflow run.
 
@@ -116,31 +140,27 @@ class ExperimentManager:
             A dictionary of figure name (str) to matplotlib.figure.Figure
         '''
         for name, fig in figures_dict.items():
-            mlflow.log_figure(fig, f'plots/{name}.png')
+            mlflow.log_figure(fig, f'plot/{name}.png')
 
 
-    def log_model(self, model: sklearn.base.BaseEstimator, preprocessors: dict, input_example: pd.DataFrame = None):
+    def log_model(self, pipeline, input_example: dict):
         ''' Log a MLflow model artifact to the current MLflow run.
 
         Parameters
         ----------
-        model: sklearn.base.BaseEstimator
+        pipeline:
             The trained model to log
-        preprocessors: dict, optional
-            A dictionary of preprocessing steps to log along with the model
+        signature: dict
+            The input feature signature dictionary
         '''
         # Create artifacts directory if it doesn't exist
         os.makedirs('artifacts', exist_ok=True)
         
         # Save model to temporary file
-        artifact_paths = {'model': 'artifacts/model.pkl'}
-        joblib.dump(model, artifact_paths['model'])
+        artifact_paths = {'pipeline': 'artifacts/pipeline.pkl'}
+        joblib.dump(pipeline, artifact_paths['pipeline'])
 
-        # Save preprocessors to temporary files
-        for index, preprocessor in preprocessors.items():
-            artifact_paths[f'preprocessor_{index}'] = f'artifacts/preprocessor_{index}.pkl'
-            joblib.dump(preprocessor, artifact_paths[f'preprocessor_{index}'])
-
+        # Add model package wheel as artifact
         wheel_src = "dist/polymodel-1.0.0-py3-none-any.whl"
         wheel_dst = f"artifacts/{os.path.basename(wheel_src)}"
         shutil.copy(wheel_src, wheel_dst)
@@ -149,9 +169,8 @@ class ExperimentManager:
         # Log the model with artifacts (code-based model using wrapper.py)
         mlflow.pyfunc.log_model(
             name='model',
-            python_model="polymodel/src/polymodel/model/wrapper.py",
+            python_model="polymodel/src/polymodel/wrapper.py",
             artifacts=artifact_paths,
-            #code_paths=['src/model_src/model/wrapper.py'],
             input_example=input_example,
             pip_requirements=[f"polymodel @ file://{{ARTIFACT_PATH}}/{os.path.basename(wheel_src)}"],
         )

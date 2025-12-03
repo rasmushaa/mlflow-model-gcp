@@ -3,59 +3,53 @@ from utils.mlflow import ExperimentManager
 from utils.context import Context
 from utils.ml.metrics import classification_report_metrics, prediction_report_metrics
 from utils.ml.processing import split_data
-from polymodel.model.factory import create_model
-from polymodel.preprocessor.factory import create_preprocessors
+from polymodel.factory import pipeline_factory
+
 
 
 def main():
 
     context = Context()
     manager = ExperimentManager()
-    loader = DataLoader(**context.config['query'])
+    loader = DataLoader(**context['query'])
+    pipeline = pipeline_factory(context['model'], context['transformer'])
 
 
     with manager.start_run():
 
         # Log all config parameters here
-        manager.log_params(context.config_flat) 
+        manager.log_params(context.ravel()) 
 
         # Load data, and log as input artifact
         data = loader.load()
         manager.log_input(data, 'Raw')
 
         # Split data into train and test sets
-        X_train, X_test, y_train, y_test = split_data(data, **context.config['training'])
+        X_train, X_test, y_train, y_test = split_data(data, **context['training'])
 
-        # Create and apply preprocessors dictionary
-        preprocessors = create_preprocessors(context.config['preprocessor'])
-        for key, preprocessor in preprocessors.items():
-            manager.log_input(X_train, f'P{key}_{preprocessor.__class__.__name__}_input')
-            X_train = preprocessor.fit_transform(X_train, y_train)
-            X_test = preprocessor.transform(X_test)
+        # Train model pipeline
+        pipeline.fit(X_train, y_train)
 
-        # Log actual model training data
-        manager.log_input(X_train, f'Model_X_train')
-        manager.log_input(X_test, f'Model_X_test')
-        manager.log_input(y_train, f'Model_y_train')
-        manager.log_input(y_test, f'Model_y_test')
+        # Log component features
+        manager.log_dict(pipeline.features, 'component_features')
+        manager.log_text(str(pipeline), 'pipeline')
 
-        # Create model, and train
-        model = create_model(**context.config['model'])
-        model.fit(X_train, y_train)
-
-        # Evaluate model
-        y_pred_prob = model.predict_proba(X_test)
-        metrics, plots = prediction_report_metrics(y_test, y_pred_prob, model.classes_)
+        # Evaluate model probabilistic predictions
+        y_pred_prob = pipeline.predict_proba(X_test)
+        metrics, plots = prediction_report_metrics(y_test, y_pred_prob, pipeline.classes)
         manager.log_metrics(metrics)
         manager.log_figures(plots)
 
-        y_pred = model.predict(X_test)
+        # Evaluate model hard predictions
+        y_pred = pipeline.predict(X_test)
         metrics, plots = classification_report_metrics(y_test, y_pred)
         manager.log_metrics(metrics)
         manager.log_figures(plots)
 
         # Log model with preprocessors
-        manager.log_model(model, preprocessors, input_example=X_train.iloc[:1, :])
+        first_layer = pipeline.features[0]['features']
+        example = X_test.iloc[:5][first_layer]
+        manager.log_model(pipeline, input_example=example)
 
 
 if __name__ == "__main__":

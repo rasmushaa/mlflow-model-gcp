@@ -4,6 +4,9 @@ from sklearn.feature_extraction.text import CountVectorizer
 
 
 class KbestTextVector:
+    """ A preprocessor that vectorizes a text column using CountVectorizer,
+    and selects the K best features using chi-squared statistical test.
+    """
 
     def __init__(self, text_column: str, kbest: int):
         """ Initialize the KbestTextVector processor.
@@ -16,8 +19,28 @@ class KbestTextVector:
             The number of best features to select.
         """
         self.__text_column = text_column
-        self.__selector = SelectKBest(score_func=chi2, k=kbest)
+        self.__kbest = kbest
+        self.__selector = SelectKBest(score_func=chi2, k=self.__kbest)
         self.__vectorizer = CountVectorizer()
+
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(text_column={self.__text_column!r}, kbest={self.__kbest!r})"
+    
+
+    @property
+    def features(self):
+        """ Get the list of selected features after fitting.
+
+        Returns
+        -------
+        list
+            The list of selected features determined in fitting.
+        """
+        if hasattr(self, '_KbestTextVector__selected_features'):
+            return self.__selected_features
+        else:
+            raise AttributeError("KbestTextVector has not been fitted yet. Please call 'fit' method before accessing 'features'.")
 
 
     def fit(self, X: pd.DataFrame, y: pd.Series) -> None:
@@ -85,7 +108,7 @@ class KbestTextVector:
     
 
     def fit_transform(self, X: pd.DataFrame, y: pd.Series) -> pd.DataFrame:
-        """ Fit and transform method to process the input DataFrame.
+        """ Fit the processor to the input DataFrame and then transform it.
 
         Parameters
         ----------
@@ -101,3 +124,4 @@ class KbestTextVector:
         """
         self.fit(X, y)
         return self.transform(X)
+    

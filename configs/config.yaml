@@ -4,12 +4,10 @@ model:
   hyperparams_file: "random_forest.yaml"
 
 # Preprocessing parameters
-preprocessor:
-  0: 
-    name: "feature_selector"
+transformer:
+  - name: "feature_selector"
     hyperparams_file: "feature_selector.yaml"
-  1:
-    name: "kbest_text_vector"
+  - name: "kbest_text_vector"
     hyperparams_file: "kbest_text_vector.yaml"
 
 # Training parameters

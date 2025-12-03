@@ -1,0 +1,6 @@
+artifact_location: file:///Users/rasmus/Ohjelmointi/vscode/mlflow-model-gcp/mlruns/512155574181222088
+creation_time: 1764774620652
+experiment_id: '512155574181222088'
+last_update_time: 1764774620652
+lifecycle_stage: active
+name: default

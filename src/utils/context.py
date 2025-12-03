@@ -1,7 +1,7 @@
 import yaml
 
 
-class Context:
+class Context(dict):
     """ The main context for everything related to configuration and hyperparameters.
 
     Attributes
@@ -18,41 +18,33 @@ class Context:
         The config and hyperparameters format is validated during loading.
         Actual values are not validated here.
         """
+        # Initialize the parent dict class
+        super().__init__()
+        
         # Safely open and load the main configuration file
-        self.__config = self.__open_config("configs/config.yaml")
+        config = self.__open_config("configs/config.yaml")
 
         # Safely open and load the model hyperparameters
-        self.__config['model']['hyperparams'] = self.__open_hyperparams(f"configs/model_hyperparams/{self.__config['model']['hyperparams_file']}")
+        config['model']['hyperparams'] = self.__open_hyperparams(f"configs/model_hyperparams/{config['model']['hyperparams_file']}")
 
-        # Safely open and load each preprocessor's hyperparameters
-        for key, preprocessor in self.__config['preprocessor'].items():
-            preprocessor['hyperparams'] = self.__open_hyperparams(f"configs/preprocessing_hyperparams/{preprocessor['hyperparams_file']}")
+        # Safely open and load each transformer's hyperparameters
+        for transformer in config['transformer']:
+            transformer['hyperparams'] = self.__open_hyperparams(f"configs/transformer_hyperparams/{transformer['hyperparams_file']}")
+        
+        # Populate the dict with the config data
+        self.update(config)
+        
 
-
-    @property
-    def config(self):
-        """ Get the model configuration dictionary.
+    def ravel(self):
+        """ Get the full configuration as a flattened dictionary,
+        using dot notation for nested keys.
 
         Returns
         -------
         config: dict
             The model configuration loaded from config.yaml
         """
-        return self.__config
-    
-
-    @property
-    def config_flat(self):
-        """ Get the flattened model configuration dictionary.
-
-        This is useful for logging parameters in MLflow.
-
-        Returns
-        -------
-        config: dict
-            The flattened model configuration loaded from config.yaml
-        """
-        return self.__flatten_dict(self.__config)
+        return self.__flatten_dict(dict(self))
     
 
     def __open_yaml(self, filepath: str) -> dict:
@@ -104,23 +96,14 @@ class Context:
         if not isinstance(config, dict):
             raise ValueError(f"Context() Configuration must be a dict. Got {config} instead")
         
-        required_keys = ['model', 'preprocessor', 'training', 'query']
+        required_keys = ['model', 'transformer', 'training', 'query']
         for key in required_keys:
             if key not in config:
                 raise ValueError(f"Context() Missing required configuration key: {key} in config.yaml")
             
-        if not isinstance(config['preprocessor'], dict):
-            raise ValueError("Context() 'preprocessor' value must be a dict of preprocessor configs")
+        if not isinstance(config['transformer'], list):
+            raise ValueError("Context() 'transformer' value must be a list of transformer configs")
         
-        current_key = 0
-        for key, preprocessor in config['preprocessor'].items():
-            if not isinstance(key, int):
-                raise ValueError(f"Context() Preprocessor keys must be integers. Got invalid key: {key}")
-            if key != current_key:
-                raise ValueError(f"Context() Preprocessor keys must be sequential integers starting from 0. Expected key: {current_key}, got: {key}")
-            current_key += 1
-
-            
 
     def __open_hyperparams(self, filepath: str) -> dict:
         """ Open and load a hyperparameters YAML file.
@@ -167,7 +150,10 @@ class Context:
     def __flatten_dict(self, d: dict, parent_key: str = '') -> dict:
         """Recursively flatten a nested dictionary using dot notation for keys.
 
-        Example: {'a': {'b': 1}} -> {'a.b': 1}
+        Examples
+        --------
+        {'a': {'b': 1}} -> {'a.b': 1}
+        {'a': [{'b': 1}, {'c': 2}]} -> {'a.0.b': 1, 'a.1.c': 2}
 
         Parameters
         ----------
@@ -184,8 +170,21 @@ class Context:
         items = {}
         for k, v in d.items():
             new_key = f"{parent_key}.{k}" if parent_key else str(k)
+            # Recurse into nested dictionaries
             if isinstance(v, dict):
                 items.update(self.__flatten_dict(v, new_key))
+            # Treat list indices as integer keys and keep parsing
+            # Avoid flattening hyperparams lists, remove for general use
+            elif isinstance(v, list) and 'hyperparams' not in parent_key:
+                for i, elem in enumerate(v):
+                    list_key = f"{new_key}.{i}"
+                    if isinstance(elem, dict):
+                        items.update(self.__flatten_dict(elem, list_key))
+                    elif isinstance(elem, list):
+                        nested_dict = {str(idx): val for idx, val in enumerate(elem)}
+                        items.update(self.__flatten_dict(nested_dict, list_key))
+                    else:
+                        items[list_key] = elem
             else:
                 items[new_key] = v
         return items

@@ -1,11 +1,21 @@
-from sklearn.base import BaseEstimator
-from sklearn.ensemble import RandomForestClassifier
+from typing import Protocol
+from .derived.random_forest import RandomForestModel
 
 
-def create_model(name: str, hyperparams: dict, **kwargs) -> BaseEstimator:
+################################# Interfaces #################################
+class BaseEstimator(Protocol):
+    def fit(self, X, y) -> None: ...
+    def predict(self, X): ...
+    def predict_proba(self, X): ...
+    @property
+    def features(self) -> list: ...
+
+
+################################ Factory Function #################################
+def model_factory(name: str, hyperparams: dict) -> BaseEstimator:
     """ Factory function to create machine learning models.
 
-    To add a new model, inherit from sklearn.base.BaseEstimator 
+    To add a new model, inherit from BaseEstimator 
     and add it to the options dictionary.
     
     Parameters
@@ -22,7 +32,7 @@ def create_model(name: str, hyperparams: dict, **kwargs) -> BaseEstimator:
     """
 
     options = {
-        'random_forest': RandomForestClassifier,
+        'random_forest': RandomForestModel,
     }
 
     if name not in options:
