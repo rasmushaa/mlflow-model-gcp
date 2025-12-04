@@ -143,16 +143,20 @@ class ExperimentManager:
             mlflow.log_figure(fig, f'plot/{name}.png')
 
 
-    def log_model(self, pipeline, input_example: dict):
+    def log_model(self, pipeline, data_example: pd.DataFrame, wheel_path: str):
         ''' Log a MLflow model artifact to the current MLflow run.
 
         Parameters
         ----------
         pipeline:
             The trained model to log
-        signature: dict
-            The input feature signature dictionary
+        data_example: pd.DataFrame
+            A small sample is extracted to use as input example mathinc the first layer features
+        wheel_path: str
+            The path to the model package wheel file
         '''
+        MODEL_NAME = 'FinanceModel'
+
         # Create artifacts directory if it doesn't exist
         os.makedirs('artifacts', exist_ok=True)
         
@@ -161,20 +165,46 @@ class ExperimentManager:
         joblib.dump(pipeline, artifact_paths['pipeline'])
 
         # Add model package wheel as artifact
-        wheel_src = "dist/polymodel-1.0.0-py3-none-any.whl"
-        wheel_dst = f"artifacts/{os.path.basename(wheel_src)}"
-        shutil.copy(wheel_src, wheel_dst)
+        wheel_dst = f"artifacts/{os.path.basename(wheel_path)}"
+        shutil.copy(wheel_path, wheel_dst)
         artifact_paths['wheel'] = wheel_dst
 
+        # Prepare input example
+        input_example = data_example.iloc[:5]
+        input_example = input_example[pipeline.features[0]['features']] # In case of extra RawFeatures
+
+        # Prepare pip requirements with explicit versions
+        pip_reqs = [
+            f"polymodel @ file://{{ARTIFACT_PATH}}/{os.path.basename(wheel_path)}",
+        ]
+
         # Log the model with artifacts (code-based model using wrapper.py)
-        mlflow.pyfunc.log_model(
-            name='model',
+        logged_model = mlflow.pyfunc.log_model(
+            name='LoggedModel',
             python_model="polymodel/src/polymodel/wrapper.py",
             artifacts=artifact_paths,
             input_example=input_example,
-            pip_requirements=[f"polymodel @ file://{{ARTIFACT_PATH}}/{os.path.basename(wheel_src)}"],
+            pip_requirements=pip_reqs,
+        )
+
+        # Register the model to the MLflow Model Registry
+        registered_model = mlflow.register_model(
+            f"models:/{logged_model.model_uri.split('/')[-1]}",
+            MODEL_NAME
         )
         
+        # Set an alias for the registered model version
+        client = mlflow.MlflowClient()
+        client.set_registered_model_alias(
+            name=MODEL_NAME,
+            alias="challenger",
+            version=registered_model.version
+        )
+
+        # Clean up temporary artifacts directory
+        shutil.rmtree('artifacts')
+        
+
     def __find_or_create_experiment(self):
         ''' Find an existing MLflow experiment by name, 
         or create it if not found.

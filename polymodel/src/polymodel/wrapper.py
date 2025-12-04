@@ -19,15 +19,7 @@ class ModelWrapper(mlflow.pyfunc.PythonModel):
         context: dict
             MLflow model context with artifacts paths.
         """
-        # Load preprocessors dynamically
-        self.__preprocessors = {}
-        for key, path in context.artifacts.items():
-            if key.startswith("preprocessor_"):
-                idx = key.replace("preprocessor_", "")
-                self.__preprocessors[idx] = joblib.load(path)
-
-        # Load the main model
-        self.__model = joblib.load(context.artifacts['model'])
+        self.__pipeline = joblib.load(context.artifacts['pipeline'])
 
 
     def predict(self, context, model_input: pd.DataFrame):
@@ -43,15 +35,7 @@ class ModelWrapper(mlflow.pyfunc.PythonModel):
         pd.DataFrame or np.ndarray
             Model predictions.
         """
-        # Copy input data to avoid modifying original
-        X = model_input.copy()
-
-        # Apply preprocessors in order
-        for idx in sorted(self.__preprocessors.keys(), key=int):
-            X = self.__preprocessors[idx].transform(X)
-
-        # Make predictions with the trained model
-        return self.__model.predict(X)
+        return self.__pipeline.predict(model_input)
 
 
 # Set this as the model for MLflow when loaded as code

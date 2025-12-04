@@ -1,6 +1,7 @@
 from data.loader import DataLoader
 from utils.mlflow import ExperimentManager
 from utils.context import Context
+from utils.package import build_wheel
 from utils.ml.metrics import classification_report_metrics, prediction_report_metrics
 from utils.ml.processing import split_data
 from polymodel.factory import pipeline_factory
@@ -13,7 +14,6 @@ def main():
     manager = ExperimentManager()
     loader = DataLoader(**context['query'])
     pipeline = pipeline_factory(context['model'], context['transformer'])
-
 
     with manager.start_run():
 
@@ -31,12 +31,12 @@ def main():
         pipeline.fit(X_train, y_train)
 
         # Log component features
-        manager.log_dict(pipeline.features, 'component_features')
+        manager.log_dict(pipeline.features, 'layers')
         manager.log_text(str(pipeline), 'pipeline')
 
         # Evaluate model probabilistic predictions
         y_pred_prob = pipeline.predict_proba(X_test)
-        metrics, plots = prediction_report_metrics(y_test, y_pred_prob, pipeline.classes)
+        metrics, plots = prediction_report_metrics(y_test, y_pred_prob, pipeline.model.classes)
         manager.log_metrics(metrics)
         manager.log_figures(plots)
 
@@ -46,10 +46,9 @@ def main():
         manager.log_metrics(metrics)
         manager.log_figures(plots)
 
-        # Log model with preprocessors
-        first_layer = pipeline.features[0]['features']
-        example = X_test.iloc[:5][first_layer]
-        manager.log_model(pipeline, input_example=example)
+        # Log model with with example data
+        wheel_path = build_wheel()
+        manager.log_model(pipeline, data_example=X_test, wheel_path=wheel_path)
 
 
 if __name__ == "__main__":

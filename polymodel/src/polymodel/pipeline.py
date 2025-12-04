@@ -72,17 +72,16 @@ class Pipeline:
         signatures[len(self.__transformers)] = {'name': self.__model.__class__.__name__, 'features': self.__model.features}
         return signatures
     
-
     @property
-    def classes(self) -> Any:
-        """ Get the classes recognized by the model.
+    def model(self) -> Model:
+        """ Get the model used in the pipeline.
         
         Returns
         -------
-        Any
-            The classes recognized by the model.
+        Model
+            The machine learning model used in the pipeline.
         """
-        return self.__model.classes
+        return self.__model
 
     def fit(self, X: pd.DataFrame, y: pd.Series) -> None:
         """ Fits the transformers and the model on the training data.
