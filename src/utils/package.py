@@ -1,6 +1,9 @@
 import pathlib
 import subprocess
 import re
+import logging
+
+logger = logging.getLogger(__name__)
 
 # The model wheel source directory
 MODEL_SRC = pathlib.Path("./polymodel")
@@ -51,4 +54,7 @@ def build_wheel() -> pathlib.Path:
 
     subprocess.run(["uv", "build", str(MODEL_SRC), "-o", str(DIST_DIR)])
 
-    return next(DIST_DIR.glob("*.whl"))
+    whl_path = next(DIST_DIR.glob("*.whl"))
+
+    logger.info(f"Built wheel: {whl_path.name}")
+    return whl_path

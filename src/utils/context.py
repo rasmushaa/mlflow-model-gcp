@@ -1,4 +1,7 @@
 import yaml
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class Context(dict):
@@ -33,8 +36,9 @@ class Context(dict):
         
         # Populate the dict with the config data
         self.update(config)
-        
+        logger.debug(f"Loaded configuration: {self}")
 
+        
     def ravel(self):
         """ Get the full configuration as a flattened dictionary,
         using dot notation for nested keys.

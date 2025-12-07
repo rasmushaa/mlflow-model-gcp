@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "polymodel"
-version = "1.0.4"
+version = "1.0.5"
 description = "Standalone ML model package with support for X-model, and N-preprocessor pipeline."
 requires-python = ">=3.13"
 dependencies = [

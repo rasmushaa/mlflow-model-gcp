@@ -1725,7 +1725,7 @@ wheels = [
 
 [[package]]
 name = "polymodel"
-version = "1.0.3"
+version = "1.0.4"
 source = { editable = "polymodel" }
 dependencies = [
     { name = "joblib" },

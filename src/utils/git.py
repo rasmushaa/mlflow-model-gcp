@@ -4,6 +4,9 @@ used for experiment tracking and reproducibility.
 '''
 import subprocess
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def get_git_metadata(prefix: str = 'git') -> dict:
@@ -35,7 +38,9 @@ def get_git_metadata(prefix: str = 'git') -> dict:
         'commit': commit if commit else 'unknown',
         'user': user if user else 'unknown',
     }
-    return {f'{prefix}.{k}': v for k, v in values.items()} # Return with prefix for tagging
+    values = {f'{prefix}.{k}': v for k, v in values.items()} # Return with prefix for tagging
+    logger.debug(f"Queried git metadata: {values}")
+    return values
 
 
 def __git_command(args):

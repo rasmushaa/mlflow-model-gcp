@@ -64,5 +64,6 @@ coverage.xml
 Thumbs.db
 desktop.ini
 
-# Mlflow
+# Project specific
 artifacts/
+app.log

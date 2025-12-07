@@ -1,6 +1,9 @@
 import os
+import logging
 import pandas as pd
 import pandas_gbq
+
+logger = logging.getLogger(__name__)
 
 
 class DataLoader():
@@ -25,6 +28,7 @@ class DataLoader():
         self.__start_date = start_date
         self.__end_date = end_date
         self.__mock = mock
+        logger.debug(f"Inited DataLoader with start_date={self.__start_date}, end_date={self.__end_date}, mock={self.__mock}")
 
 
     @property
@@ -82,6 +86,7 @@ class DataLoader():
         
         df['date'] = pd.to_datetime(df['date'], format='%Y-%m-%d').dt.date
         df = df.dropna().reset_index(drop=True)
+        logger.info(f"Queried {len(df)} rows of training data from BigQuery")
         return df
 
 

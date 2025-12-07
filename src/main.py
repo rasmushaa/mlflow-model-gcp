@@ -1,4 +1,6 @@
+import logging
 from data.loader import DataLoader
+from utils.setup_logging import setup_logging
 from utils.mlflow import ExperimentManager
 from utils.context import Context
 from utils.package import build_wheel
@@ -6,6 +8,7 @@ from utils.ml.metrics import classification_report_metrics, prediction_report_me
 from utils.ml.processing import split_data
 from polymodel.factory import pipeline_factory
 
+setup_logging(level=logging.INFO)
 
 
 def main():

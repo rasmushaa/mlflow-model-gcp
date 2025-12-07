@@ -4,7 +4,10 @@ This pipeline allows for sequential data preprocessing followed by model trainin
 A interfaces for transformers and models are defined using Protocols to ensure compatibility.
 """
 from typing import Protocol, Any, List
+import logging
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 
 ############################### Interfaces #################################
@@ -82,6 +85,17 @@ class Pipeline:
             The machine learning model used in the pipeline.
         """
         return self.__model
+    
+    @property
+    def transformers(self) -> List[Transformer]:
+        """ Get the list of transformers used in the pipeline.
+        
+        Returns
+        -------
+        List[Transformer]
+            The list of transformer instances used in the pipeline.
+        """
+        return self.__transformers
 
     def fit(self, X: pd.DataFrame, y: pd.Series) -> None:
         """ Fits the transformers and the model on the training data.
@@ -93,9 +107,12 @@ class Pipeline:
         y : pd.Series
             The target labels for training.
         """
+        logger.info("Starting pipeline training")
         for transformer in self.__transformers:
             X = transformer.fit_transform(X, y)
         self.__model.fit(X, y)
+        logger.info("Pipeline training completed")
+        logger.debug(f"Trained model pipeline layers:\n{self.features}")
 
     
     def predict(self, X: pd.DataFrame) -> pd.Series:

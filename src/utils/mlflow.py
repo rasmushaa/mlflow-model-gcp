@@ -5,7 +5,10 @@ from datetime import datetime
 import mlflow
 import pandas as pd
 import numpy as np
+import logging
 from utils.git import get_git_metadata
+
+logger = logging.getLogger(__name__)
 
 
 class ExperimentManager:
@@ -25,6 +28,7 @@ class ExperimentManager:
         self.__experiment_name = os.getenv('MLFLOW_EXPERIMENT_NAME', 'default')
         self.__experiment = self.__find_or_create_experiment()
         self.__run = None
+        logger.debug(f"Initialized ExperimentManager for experiment: {self.__experiment_name}")
 
 
     def start_run(self) -> mlflow.entities.Run:
