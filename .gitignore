@@ -66,4 +66,4 @@ desktop.ini
 
 # Project specific
 artifacts/
-app.log
+*.log
