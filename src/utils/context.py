@@ -102,44 +102,48 @@ class Context(dict):
             raise ValueError("Context() 'transformer' value must be a list of transformer configs")
 
 
-    def __flatten_dict(self, d: dict, parent_key: str = '') -> dict:
-        """Recursively flatten a nested dictionary using dot notation for keys.
+    def __flatten_dict(self, d: dict) -> dict:
+        """ Flatten a nested dictionary using dot notation for keys.
 
-        Examples
-        --------
-        {'a': {'b': 1}} -> {'a.b': 1}
-        {'a': [{'b': 1}, {'c': 2}]} -> {'a.0.b': 1, 'a.1.c': 2}
-
+        Example
+        -------
+        >>> {'model': {'name': 'random_forest', 'hyperparams': {'max_depth': 10, 'n_estimators': 100}}, training: {'target_column': 'label'}}
+        becomes
+        >>> {'model.random_forest.max_depth': 10, 'model.random_forest.n_estimators': 100, 'training.target_column': 'label'}
+        
         Parameters
         ----------
         d: dict
-            The dictionary to flatten
-        parent_key: str
-            The prefix for keys (used during recursion)
+            The nested dictionary to flatten.
 
         Returns
         -------
         dict
-            A new dictionary with flattened keys
+            The flattened dictionary for mlflow logging.
         """
+
         items = {}
         for k, v in d.items():
-            new_key = f"{parent_key}.{k}" if parent_key else str(k)
-            # Recurse into nested dictionaries
-            if isinstance(v, dict):
-                items.update(self.__flatten_dict(v, new_key))
-            # Treat list indices as integer keys and keep parsing
-            # Avoid flattening hyperparams lists, remove for general use
-            elif isinstance(v, list) and 'hyperparams' not in parent_key:
-                for i, elem in enumerate(v):
-                    list_key = f"{new_key}.{i}"
-                    if isinstance(elem, dict):
-                        items.update(self.__flatten_dict(elem, list_key))
-                    elif isinstance(elem, list):
-                        nested_dict = {str(idx): val for idx, val in enumerate(elem)}
-                        items.update(self.__flatten_dict(nested_dict, list_key))
-                    else:
-                        items[list_key] = elem
+            
+            if k == 'model':
+                name = v.get('name', 'unknown_model')
+                hyperparams = v.get('hyperparams', {})
+                for hk, hv in hyperparams.items():
+                    items[f'model.{name}.{hk}'] = hv
+
+            elif k == 'transformer':
+                for i, transformer in enumerate(v):
+                    t_name = transformer.get('name', f'unknown_transformer_{i}')
+                    t_hyperparams = transformer.get('hyperparams', {})
+                    for tk, tv in t_hyperparams.items():
+                        items[f'transformer.{t_name}.{tk}'] = tv
+
+            elif isinstance(v, dict):
+                sub_items = self.__flatten_dict(v)
+                for sub_k, sub_v in sub_items.items():
+                    items[f'{k}.{sub_k}'] = sub_v
+            
             else:
-                items[new_key] = v
+                items[k] = v
+
         return items

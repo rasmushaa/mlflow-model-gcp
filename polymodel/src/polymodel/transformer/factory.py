@@ -1,6 +1,7 @@
 from typing import Protocol
 from .feature_selector import FeatureSelector
 from .kbest_text_vector import KbestTextVector
+from .text_cleaner import TextCleaner
 
 
 ################################# Interfaces #################################
@@ -35,6 +36,7 @@ def transformer_factory(name: str, hyperparams: dict) -> BaseTransformer:
     options = {
         'feature_selector': FeatureSelector,
         'kbest_text_vector': KbestTextVector,
+        'text_cleaner': TextCleaner,
     }
 
     if name not in options:

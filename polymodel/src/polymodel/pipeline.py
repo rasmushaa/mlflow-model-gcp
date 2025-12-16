@@ -57,6 +57,20 @@ class Pipeline:
         str += f"\n    {self.__model!r}"
         str += "\n)"
         return str
+    
+
+    @property
+    def architecture(self) -> str:
+        """ Get a string representation of the pipeline architecture.
+        
+        Returns
+        -------
+        str
+            A string describing the sequence of transformers and the model in the pipeline.
+        """
+        arch = ",".join([t.__class__.__name__ for t in self.__transformers])
+        arch += "," + self.__model.__class__.__name__
+        return arch
 
 
     @property

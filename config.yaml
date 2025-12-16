@@ -16,6 +16,10 @@ transformer:
         - "receiver"
         - "amount"
 
+  - name: "text_cleaner"
+    hyperparams:
+      text_column: "receiver"
+
   - name: "kbest_text_vector"
     hyperparams:
       text_column: "receiver"

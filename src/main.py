@@ -67,6 +67,7 @@ def main():
         # Log component features
         manager.log_dict(pipeline.features, 'layers')
         manager.log_text(str(pipeline), 'pipeline')
+        manager.log_params({'architecture': pipeline.architecture})
 
         # Aggregate K-Fold results for individual folds
         # Metrics has to be logged after model logging to avoid duplication issues due this Bug: https://github.com/ecmwf/anemoi-core/issues/190
