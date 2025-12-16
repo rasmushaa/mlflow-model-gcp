@@ -1,6 +1,7 @@
 import os
 import shutil
 import joblib
+import time
 from datetime import datetime
 import mlflow
 import pandas as pd
@@ -77,17 +78,29 @@ class ExperimentManager:
         mlflow.log_params(params)
 
     
-    def log_metrics(self, metrics: dict, step: int = None):
+    def log_metrics(self, metrics: dict, step: int = None, decimals: int = 3):
         ''' Log a dictionary of metrics to the current MLflow run.
+
+        Forces unique timestamps for each metric to avoid overwriting.
+        The model logging in MLflow copys the metrics from the current run,
+        and but the database does not suport duplicated rows.
+
+        Example error:
+        DETAIL:  Key (key, "timestamp", step, run_uuid, value, is_nan)=
+        (roc_auc.CLOTHING.mean, 1765208298936, 0, abe53812940349ec8077a251eaa92a3b, 0, t) already exists.
 
         Parameters
         ----------
         metrics: dict
             A dictionary of metrics to log
         step: int, optional
-            The step at which to log the metrics
+            The mlflow step at which to log the metrics
+        decimals: int, optional
+            The number of decimal places to round the metric values
         '''
-        mlflow.log_metrics(metrics, step=step)
+        for i, (k, v) in enumerate(metrics.items()):
+            mlflow.log_metric(k, round(v, decimals), step=step)
+
 
 
     def log_input(self, df, name: str):
@@ -159,7 +172,7 @@ class ExperimentManager:
         wheel_path: str
             The path to the model package wheel file
         '''
-        MODEL_NAME = 'FinanceModel'
+        MODEL_NAME = 'TransactionModel'
 
         # Create artifacts directory if it doesn't exist
         os.makedirs('artifacts', exist_ok=True)
@@ -219,6 +232,14 @@ class ExperimentManager:
             The found or newly created experiment object
         '''
         experiment = mlflow.get_experiment_by_name(name=self.__experiment_name)
+
+        # If experiment exists but is deleted, it should be restored or permanently deleted first
+        if experiment and experiment.lifecycle_stage == "deleted":
+            raise RuntimeError(
+                f"Experiment '{self.__experiment_name}' exists in 'deleted' state. "
+                "Run `mlflow experiments restore` or `mlflow gc`."
+            )
+    
         if not experiment:
             mlflow.create_experiment(name=self.__experiment_name)
             experiment = mlflow.get_experiment_by_name(name=self.__experiment_name)

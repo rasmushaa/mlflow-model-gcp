@@ -37,10 +37,7 @@ class KbestTextVector:
         list
             The list of selected features determined in fitting.
         """
-        if hasattr(self, '_KbestTextVector__selected_features'):
-            return self.__selected_features
-        else:
-            raise AttributeError("KbestTextVector has not been fitted yet. Please call 'fit' method before accessing 'features'.")
+        return [self.__text_column]
 
 
     def fit(self, X: pd.DataFrame, y: pd.Series) -> None:

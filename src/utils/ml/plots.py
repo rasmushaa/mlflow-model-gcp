@@ -127,6 +127,29 @@ def plot_roc_auc(ax: plt.Axes, fpr: dict, tpr: dict, roc_auc: dict) -> plt.Axes:
     return ax
 
 
+def plot_kfold_results(ax: plt.Axes, kfold_metrics: dict) -> plt.Axes:
+
+    metrics = list(kfold_metrics.keys())
+
+    N = min(len(metrics), 4)
+    cycle_iterator = _get_color_wheel(N)
+
+    for metric in metrics:
+        ax.plot(
+            kfold_metrics[metric],
+            label=metric,
+            **next(cycle_iterator),
+        )
+
+    ax.set_title('K-Fold Cross Validation Metrics')
+    ax.set_xlabel('Fold Number')
+    ax.set_ylabel('Metric Value')
+    ax.set_ylim(0, 1.0)
+    ax.grid(ls='--', alpha=0.7, color='gray')
+    ax.legend()
+    plt.tight_layout()
+    return ax
+
 def _bars_to_gradient(bar_container, values: list, colors: str = 'Greens'):
     """ Apply a gradient color map to a bar container.
 

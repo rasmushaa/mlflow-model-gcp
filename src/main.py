@@ -4,11 +4,23 @@ from utils.setup_logging import setup_logging
 from utils.mlflow import ExperimentManager
 from utils.context import Context
 from utils.package import build_wheel
-from utils.ml.metrics import classification_report_metrics, prediction_report_metrics
-from utils.ml.processing import split_data
+from utils.ml.metrics import kfold_report_metrics, evaluate_model
+from utils.ml.processing import kfold_iterator
 from polymodel.factory import pipeline_factory
 
 setup_logging(level=logging.INFO)
+
+
+def load_and_log_data(manager: ExperimentManager, loader: DataLoader):
+    data = loader.load()
+    manager.log_input(data, 'Raw')
+    return data
+
+
+def fit_new_pipeline(X_train, y_train, context):
+    pipeline = pipeline_factory(context['model'], context['transformer'])
+    pipeline.fit(X_train, y_train)
+    return pipeline
 
 
 def main():
@@ -16,42 +28,53 @@ def main():
     context = Context()
     manager = ExperimentManager()
     loader = DataLoader(**context['query'])
-    pipeline = pipeline_factory(context['model'], context['transformer'])
 
     with manager.start_run():
 
         # Log all config parameters here
         manager.log_params(context.ravel()) 
 
-        # Load data, and log as input artifact
-        data = loader.load()
-        manager.log_input(data, 'Raw')
+        # Load and log data
+        data = load_and_log_data(manager, loader)
 
-        # Split data into train and test sets
-        X_train, X_test, y_train, y_test = split_data(data, **context['training'])
+        # K-Fold Cross Validation
+        kfold_data = {}
+        for fold, X_train, X_test, y_train, y_test in kfold_iterator(data, **context['training']):
+            logging.info(f"Fold {fold}: Train shape: {X_train.shape}")
 
-        # Train model pipeline
-        pipeline.fit(X_train, y_train)
+            # Build and Fit a new pipeline for each fold
+            pipeline = fit_new_pipeline(X_train, y_train, context)
+
+            # Evaluate model, and collect metrics and plots for the fold
+            metrics, plots = evaluate_model(pipeline, X_test, y_test)
+            kfold_data[f'fold{fold}'] = {
+                'metrics': metrics,
+                'plots': plots
+            }
+
+            # Log fold traces for macro metrics
+            for metric_name, metric_value in metrics.items():
+                if 'macro' in metric_name or 'accuracy' in metric_name:
+                    manager.log_metrics({f'{metric_name}.kfold': metric_value}, step=fold)
+
+        # Final model training on full data for model registry
+        X_full = data.drop(columns=[context['training']['target_column']])
+        y_full = data[context['training']['target_column']]
+        pipeline = fit_new_pipeline(X_full, y_full, context)
+        wheel_path = build_wheel()
+        manager.log_model(pipeline, data_example=X_full, wheel_path=wheel_path)
 
         # Log component features
         manager.log_dict(pipeline.features, 'layers')
         manager.log_text(str(pipeline), 'pipeline')
 
-        # Evaluate model probabilistic predictions
-        y_pred_prob = pipeline.predict_proba(X_test)
-        metrics, plots = prediction_report_metrics(y_test, y_pred_prob, pipeline.model.classes)
-        manager.log_metrics(metrics)
+        # Aggregate K-Fold results for individual folds
+        # Metrics has to be logged after model logging to avoid duplication issues due this Bug: https://github.com/ecmwf/anemoi-core/issues/190
+        metrics, plots = kfold_report_metrics(kfold_data) # Aggregate metrics, and concatenate plots
         manager.log_figures(plots)
-
-        # Evaluate model hard predictions
-        y_pred = pipeline.predict(X_test)
-        metrics, plots = classification_report_metrics(y_test, y_pred)
         manager.log_metrics(metrics)
-        manager.log_figures(plots)
 
-        # Log model with with example data
-        wheel_path = build_wheel()
-        manager.log_model(pipeline, data_example=X_test, wheel_path=wheel_path)
+
 
 
 if __name__ == "__main__":

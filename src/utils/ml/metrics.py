@@ -8,7 +8,45 @@ import numpy as np
 from matplotlib import pyplot as plt
 from sklearn.preprocessing import label_binarize
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_curve, auc
-from .plots import plot_roc_auc, plot_confusion_matrix, plot_classification_metrics
+from .plots import plot_roc_auc, plot_confusion_matrix, plot_classification_metrics, plot_kfold_results
+
+
+def evaluate_model(pipeline, X_test: pd.DataFrame, y_test: pd.Series) -> tuple[dict, dict]:
+    ''' Evaluate a classification model pipeline on test data.
+
+    A wrapper function that evaluates both probabilistic predictions
+    and hard predictions, combining their metrics and plots,
+    calling the respective evaluation functions.
+
+    Parameters
+    ----------
+    pipeline: sklearn.pipeline.Pipeline
+        The trained classification model pipeline
+    X_test: pd.DataFrame
+        The test feature data
+    y_test: pd.Series
+        The true target labels for the test data
+
+    Returns
+    -------
+    metrics: dict
+        A dictionary containing evaluation metrics.
+    plots: dict
+        A dictionary containing evaluation plots.
+    '''
+    # Evaluate model probabilistic predictions
+    y_pred_prob = pipeline.predict_proba(X_test)
+    metrics0, plots0 = prediction_report_metrics(y_test, y_pred_prob, pipeline.model.classes)
+
+    # Evaluate model hard predictions, and add to fold metrics
+    y_pred = pipeline.predict(X_test)
+    metrics1, plots1 = classification_report_metrics(y_test, y_pred)
+
+    # Combine metrics and plots
+    metrics = {**metrics0, **metrics1}
+    plots = {**plots0, **plots1}
+
+    return metrics, plots
 
 
 def _compute_binary_classification_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> dict:
@@ -122,7 +160,7 @@ def classification_report_metrics(y_true: pd.Series, y_pred: pd.Series) -> tuple
     selected_metrics = ['accuracy'] + [f"{m}.{avg}" for m in ['precision', 'recall', 'f1'] for avg in ['micro', 'macro']]
 
     # Plot confusion matrix, and metrics
-    fig, axis = plt.subplots(1, 2, gridspec_kw={'width_ratios': [5, 1]}, figsize=(10, 7), dpi=160)
+    fig, axis = plt.subplots(1, 2, gridspec_kw={'width_ratios': [5, 1]}, figsize=(12, 7), dpi=140)
     plot_confusion_matrix(axis[0], y_true, y_pred)
     plot_classification_metrics(axis[1], {k: v for k, v in metrics.items() if k in selected_metrics})
     plt.tight_layout()
@@ -270,3 +308,54 @@ def prediction_report_metrics(y_true, y_prob, classes) -> tuple[dict, dict]:
     plt.close(fig)
 
     return metrics, {'roc_auc_curve': fig}
+
+
+def kfold_report_metrics(kfold_data: dict) -> tuple[dict, dict]:
+    ''' Aggregate K-Fold cross-validation metrics and plots.
+
+    Parameters
+    ----------
+    kfold_data: dict
+        A dictionary where each key is a fold identifier (e.g., 'fold1', 'fold2', ...)
+        and each value is another dictionary containing 'metrics' and 'plots' for that fold.
+
+    Returns
+    -------
+    aggregated_metrics: dict
+        A dictionary containing aggregated evaluation metrics across all folds.
+        Each metric has both mean and standard error (with '.sem' suffix).
+    aggregated_plots: dict
+        A dictionary containing aggregated plots across all folds.
+    '''
+    aggregated_metrics = {}
+    aggregated_plots = {}
+
+    # Collect all metric values for each metric key -> {accuracy: [v1, v2, ...], ...}
+    metric_values = {}
+    for fold_key, fold_content in kfold_data.items():
+        fold_metrics = fold_content['metrics']
+        for metric_key, metric_value in fold_metrics.items():
+            if metric_key not in metric_values:
+                metric_values[metric_key] = []
+            metric_values[metric_key].append(metric_value)
+
+    # Compute aggregates for each metric -> {accuracy: mean, accuracy.sem: sem, ...}
+    for metric_key, values in metric_values.items():
+        values_array = np.array(values)
+        aggregated_metrics[f'{metric_key}.mean'] = float(np.mean(values_array))
+        aggregated_metrics[f'{metric_key}.minmax'] = float(np.max(values_array) - np.min(values_array))
+
+    # Collect plots from each fold
+    for fold_key, fold_content in kfold_data.items():
+        fold_plots = fold_content['plots']
+        for plot_key, plot_value in fold_plots.items():
+            aggregated_plots[f"{plot_key}_{fold_key}"] = plot_value
+
+    # Optional: Generate K-Fold traces plot for selected metrics
+    # Currently the mlflow steps are used to log these plots, so this is commented out.
+    # fig = plt.figure(figsize=(10, 6), dpi=120)
+    # plot_kfold_results(fig.gca(), metric_values)
+    # plt.close(fig)
+    # aggregated_plots['kfold_traces'] = fig # Uncomment to log K-Fold traces plot
+
+    return aggregated_metrics, aggregated_plots

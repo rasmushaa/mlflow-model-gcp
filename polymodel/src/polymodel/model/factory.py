@@ -1,5 +1,5 @@
 from typing import Protocol
-from .derived.random_forest import RandomForestModel
+from .random_forest import RandomForestModel
 
 
 ################################# Interfaces #################################

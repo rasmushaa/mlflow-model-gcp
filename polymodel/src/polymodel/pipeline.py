@@ -75,6 +75,7 @@ class Pipeline:
         signatures[len(self.__transformers)] = {'name': self.__model.__class__.__name__, 'features': self.__model.features}
         return signatures
     
+    
     @property
     def model(self) -> Model:
         """ Get the model used in the pipeline.

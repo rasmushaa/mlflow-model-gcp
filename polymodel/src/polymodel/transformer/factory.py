@@ -1,6 +1,6 @@
 from typing import Protocol
-from .custom.feature_selector import FeatureSelector
-from .derived.kbest_text_vector import KbestTextVector
+from .feature_selector import FeatureSelector
+from .kbest_text_vector import KbestTextVector
 
 
 ################################# Interfaces #################################

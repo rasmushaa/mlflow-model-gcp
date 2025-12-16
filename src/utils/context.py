@@ -25,18 +25,11 @@ class Context(dict):
         super().__init__()
         
         # Safely open and load the main configuration file
-        config = self.__open_config("configs/config.yaml")
+        config = self.__open_config("config.yaml")
 
-        # Safely open and load the model hyperparameters
-        config['model']['hyperparams'] = self.__open_hyperparams(f"configs/model_hyperparams/{config['model']['hyperparams_file']}")
-
-        # Safely open and load each transformer's hyperparameters
-        for transformer in config['transformer']:
-            transformer['hyperparams'] = self.__open_hyperparams(f"configs/transformer_hyperparams/{transformer['hyperparams_file']}")
-        
         # Populate the dict with the config data
         self.update(config)
-        logger.debug(f"Loaded configuration: {self}")
+        logger.info(f"Loaded configuration: {self}")
 
         
     def ravel(self):
@@ -107,48 +100,6 @@ class Context(dict):
             
         if not isinstance(config['transformer'], list):
             raise ValueError("Context() 'transformer' value must be a list of transformer configs")
-        
-
-    def __open_hyperparams(self, filepath: str) -> dict:
-        """ Open and load a hyperparameters YAML file.
-
-        Parameters
-        ----------
-        filepath: str
-            The path to the hyperparameters YAML file.
-
-        Returns
-        -------
-        dict
-            The loaded hyperparameters as a dictionary.
-        """
-        hyperparams = self.__open_yaml(filepath)
-        self.__validate_hyperparams(hyperparams)
-        return hyperparams
-            
-
-    def __validate_hyperparams(self, hyperparams: dict):
-        """ Validate the hyperparameters dictionary.
-        
-        Parameters
-        ----------
-        hyperparams: dict
-            The hyperparameters dictionary to validate
-
-        Raises
-        ------
-        ValueError
-            If hyperparameters are missing, not a dict, empty, or contain invalid keys/values
-        """
-        if not isinstance(hyperparams, dict):
-            raise ValueError(f"Context() Hyperparameters must be a dict. Got {hyperparams} instead")
-
-        if not hyperparams:
-            raise ValueError("Context() Hyperparameters must not be empty")
-
-        for key, value in hyperparams.items():
-            if not isinstance(key, str):
-                raise ValueError(f"Context() All hyperparameter keys must be strings. Got invalid key: {key}")
 
 
     def __flatten_dict(self, d: dict, parent_key: str = '') -> dict:
