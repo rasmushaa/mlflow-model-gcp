@@ -43,11 +43,10 @@ jobs:
     - name: Deploy Cloud Run Job
       run: |
         gcloud run jobs deploy mlflow-pipeline \
-          --image=${{ secrets.GCP_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mlflow-images/pipeline:latest \
-          --region=${{ secrets.GCP_LOCATION }}
+          --image "${{ secrets.GCP_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mlflow-images/pipeline:latest" \
+          --region ${{ secrets.GCP_LOCATION }} \
           --service-account ${{ secrets.GCP_MLFLOW_SA_NAME }} \
           --env-vars-file env-vars.yaml \
           --cpu 1 \
           --memory 500Mi \
           --execute-now
-

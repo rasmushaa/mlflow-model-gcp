@@ -2,7 +2,7 @@
 A collection of data processing utilities for ML tasks.
 Includes functions to split data into training and testing sets.
 """
-from typing import Generator
+from typing import Iterator
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import KFold
@@ -53,11 +53,11 @@ def split_data(
 
 
 def kfold_iterator(
-        data: pd.DataFrame, 
-        target_column: str, 
-        n_splits: int, 
-        shuffle: bool, 
-        random_state: int) -> Generator[tuple[int, pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]]:
+    data: pd.DataFrame, 
+    target_column: str, 
+    n_splits: int, 
+    shuffle: bool, 
+    random_state: int) -> Iterator[tuple[int, pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]]:
     """ Generate K-Fold cross-validation splits.
 
     Parameters
