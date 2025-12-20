@@ -1,0 +1,53 @@
+name: Build and Deploy to Cloud Run Job
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Authenticate with Google Cloud
+      uses: google-github-actions/auth@v1
+      with:
+        credentials_json: ${{ secrets.GCP_DEPLOY_SA }}
+
+    - name: Set up Google Cloud SDK
+      uses: google-github-actions/setup-gcloud@v1
+      with:
+        project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+    - name: Configure Docker to use gcloud as a credential helper
+      run: |
+        gcloud auth configure-docker ${{ secrets.GCP_LOCATION }}-docker.pkg.dev
+
+    - name: Build and Push Docker image
+      run: |
+        IMAGE_URI="${{ secrets.GCP_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mlflow-jobs/pipeline:latest"
+        docker build -t "$IMAGE_URI" .
+        docker push "$IMAGE_URI"
+
+    - name: Create env-vars.yaml
+      run: |
+        cat <<EOF > env-vars.yaml
+        MLFLOW_TRACKING_USERNAME: "${{ secrets.MLFLOW_TRACKING_USERNAME }}" 
+        MLFLOW_TRACKING_PASSWORD: "${{ secrets.MLFLOW_TRACKING_PASSWORD }}"
+        EOF
+
+    - name: Deploy Cloud Run Job
+      run: |
+        gcloud run jobs deploy mlflow-pipeline \
+          --image=${{ secrets.GCP_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mlflow-jobs/pipeline:latest \
+          --region=${{ secrets.GCP_LOCATION }}
+          --service-account ${{ secrets.GCP_MLFLOW_SA_NAME }} \
+          --env-vars-file env-vars.yaml \
+          --cpu 1 \
+          --memory 500Mi \
+          --execute-now
+

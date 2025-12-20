@@ -23,7 +23,7 @@ transformer:
   - name: "kbest_text_vector"
     hyperparams:
       text_column: "receiver"
-      kbest: 150
+      kbest: 50
 
 # Training parameters
 training:
