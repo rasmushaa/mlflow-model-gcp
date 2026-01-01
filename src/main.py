@@ -8,7 +8,7 @@ from utils.ml.metrics import kfold_report_metrics, evaluate_model
 from utils.ml.processing import kfold_iterator
 from polymodel.factory import pipeline_factory
 
-setup_logging(level=logging.INFO)
+setup_logging(level=logging.DEBUG)
 
 
 def load_and_log_data(manager: ExperimentManager, loader: DataLoader):
@@ -74,9 +74,6 @@ def main():
         metrics, plots = kfold_report_metrics(kfold_data) # Aggregate metrics, and concatenate plots
         manager.log_figures(plots)
         manager.log_metrics(metrics)
-
-
-
 
 if __name__ == "__main__":
     main()

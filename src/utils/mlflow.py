@@ -1,13 +1,12 @@
 import os
 import shutil
 import joblib
-import time
 from datetime import datetime
 import mlflow
 import pandas as pd
 import numpy as np
 import logging
-from utils.git import get_git_metadata
+from .package import get_current_version, get_hash_of_file
 
 logger = logging.getLogger(__name__)
 
@@ -249,11 +248,19 @@ class ExperimentManager:
     def __log_default_params(self):
         ''' Log default parameters to the new MLflow run.
         
-        The default parameters include Git metadata for reproducibility.
+        The default parameters include Git metadata for reproducibility,
+        and model package version and hash.
         '''
-        git_metadata = get_git_metadata()
-        mlflow.set_tags(git_metadata)
-    
+        version = get_current_version()
+        file_hash = get_hash_of_file()
+        git_sha = os.getenv("GIT_COMMIT_SHA")
+
+        mlflow.set_tags({
+            "model.package.version": version,
+            "model.package.hash": file_hash,
+            "git.commit.sha": git_sha
+        })
+
 
     def __create_run_name(self):
         ''' Create a run name based on current datetime.

@@ -68,8 +68,8 @@ class Pipeline:
         str
             A string describing the sequence of transformers and the model in the pipeline.
         """
-        arch = ",".join([t.__class__.__name__ for t in self.__transformers])
-        arch += "," + self.__model.__class__.__name__
+        arch = "->".join([t.__class__.__name__ for t in self.__transformers])
+        arch += "->" + self.__model.__class__.__name__
         return arch
 
 
