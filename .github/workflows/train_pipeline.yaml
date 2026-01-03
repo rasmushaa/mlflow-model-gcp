@@ -64,5 +64,5 @@ jobs:
           --service-account ${{ secrets.GCP_MLFLOW_SA_NAME }} \
           --env-vars-file env-vars.yaml \
           --cpu 1 \
-          --memory 500Mi \
+          --memory 800Mi \
           --execute-now
