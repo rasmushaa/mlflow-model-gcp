@@ -19,9 +19,9 @@ jobs:
         else
           echo "ENV=dev" >> $GITHUB_ENV
         fi
-        IMAGE_URI="${{ secrets.GCP_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mlflow-images/pipeline-${{ env.ENV }}:latest"
+        IMAGE_URI="${{ secrets.GCP_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mlflow-images/pipeline-${ENV}:latest"
         echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
-        MLFLOW_EXPERIMENT_NAME="Experiment-${{ env.ENV }}"
+        MLFLOW_EXPERIMENT_NAME="Experiment-${ENV}"
         echo "MLFLOW_EXPERIMENT_NAME=$MLFLOW_EXPERIMENT_NAME" >> $GITHUB_ENV
 
     - name: Checkout code
