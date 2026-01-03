@@ -1,20 +1,24 @@
 FROM python:3.11-slim
 
-# Install system deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc curl && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
 WORKDIR /app
 
-# Copy application code
-COPY . .
+# Copy everything needed
+COPY pyproject.toml uv.lock /app/
+COPY polymodel /app/polymodel
+COPY src /app/src
+COPY config.yaml /app/config.yaml
 
-# Install Python dependencies
-RUN pip install --no-cache-dir uv
-RUN pip install --no-cache-dir -r requirements.txt
+# Use system Python (no venv)
+RUN uv pip install --system -r pyproject.toml
 
-# Set environment variables
+# Build polymodel to include the package wheel
+RUN uv build polymodel/ --out-dir /app/dist
+
 # The commit SHA should be passed as a build argument to connect the mlflow run to code version
 ARG GIT_SHA
 ENV GIT_COMMIT_SHA=${GIT_SHA}

@@ -3,66 +3,52 @@ A module defining a machine learning pipeline that integrates data transformers 
 This pipeline allows for sequential data preprocessing followed by model training and prediction.
 A interfaces for transformers and models are defined using Protocols to ensure compatibility.
 """
-from typing import Protocol, Any, List
+
 import logging
+from typing import List
+
 import pandas as pd
+
+from .model.interface import ModelInterface
+from .transformer.interface import TransformerInterface
 
 logger = logging.getLogger(__name__)
 
 
-############################### Interfaces #################################
-class Transformer(Protocol):
-    def fit(self, data: pd.DataFrame, target: pd.Series) -> None: ...
-    def transform(self, data: pd.DataFrame) -> pd.DataFrame: ...
-    def fit_transform(self, data: pd.DataFrame, target: pd.Series) -> pd.DataFrame: ...
-    @property
-    def features(self) -> List[str]: ...
-
-class Model(Protocol):
-    def fit(self, data: pd.DataFrame, target: pd.Series) -> None: ...
-    def predict(self, data: pd.DataFrame) -> pd.Series: ...
-    def predict_proba(self, data: pd.DataFrame) -> pd.DataFrame: ...
-    @property
-    def features(self) -> List[str]: ...
-    @property
-    def classes(self) -> Any: ...
-    
-
-################################ Pipeline #################################
 class Pipeline:
-    def __init__(self, transformers: List[Transformer], model: Model):
-        """ Initializes the Pipeline with a list of transformers and a model.
-        
+    def __init__(
+        self, transformers: List[TransformerInterface], model: ModelInterface
+    ) -> None:
+        """Initializes the Pipeline with a list of transformers and a model.
+
         Parameters
         ----------
-        transformers : List[Transformer]
-            A list of transformer instances to preprocess the data in sequence.
-        model : Model
+        transformers : List[TransformerInterface]
+            A sequence of transformer instances to preprocess the data in sequence.
+        model : ModelInterface
             The machine learning model to be trained and used for predictions.
         """
         self.__transformers = transformers
         self.__model = model
 
-    
     def __repr__(self) -> str:
-        """ Return a string representation of the pipeline, 
+        """Return a string representation of the pipeline,
         including its transformers and model.
         """
         str = "\nPipeline("
         str += "\n  Transformers: ["
         for transformer in self.__transformers:
             str += f"\n    {transformer!r},"
-        str += f"\n  ]"
-        str += f"\n  Model:"
+        str += "\n  ]"
+        str += "\n  Model:"
         str += f"\n    {self.__model!r}"
         str += "\n)"
         return str
-    
 
     @property
     def architecture(self) -> str:
-        """ Get a string representation of the pipeline architecture.
-        
+        """Get a string representation of the pipeline architecture.
+
         Returns
         -------
         str
@@ -72,11 +58,10 @@ class Pipeline:
         arch += "->" + self.__model.__class__.__name__
         return arch
 
-
     @property
     def features(self) -> dict:
-        """ Get the signatures of the transformers and model in the pipeline.
-        
+        """Get the signatures of the transformers and model in the pipeline.
+
         Returns
         -------
         dict
@@ -84,37 +69,42 @@ class Pipeline:
         """
         signatures = {}
         for i, transformer in enumerate(self.__transformers):
-            entry = {'name': transformer.__class__.__name__, 'features': transformer.features}
+            entry = {
+                "name": transformer.__class__.__name__,
+                "features": transformer.features,
+            }
             signatures[i] = entry
-        signatures[len(self.__transformers)] = {'name': self.__model.__class__.__name__, 'features': self.__model.features}
+        signatures[len(self.__transformers)] = {
+            "name": self.__model.__class__.__name__,
+            "features": self.__model.features,
+        }
         return signatures
-    
-    
+
     @property
-    def model(self) -> Model:
-        """ Get the model used in the pipeline.
-        
+    def model(self) -> ModelInterface:
+        """Get the model used in the pipeline.
+
         Returns
         -------
-        Model
+        ModelInterface
             The machine learning model used in the pipeline.
         """
         return self.__model
-    
+
     @property
-    def transformers(self) -> List[Transformer]:
-        """ Get the list of transformers used in the pipeline.
-        
+    def transformers(self) -> List[TransformerInterface]:
+        """Get the list of transformers used in the pipeline.
+
         Returns
         -------
-        List[Transformer]
+        List[TransformerInterface]
             The list of transformer instances used in the pipeline.
         """
         return self.__transformers
 
     def fit(self, X: pd.DataFrame, y: pd.Series) -> None:
-        """ Fits the transformers and the model on the training data.
-        
+        """Fits the transformers and the model on the training data.
+
         Parameters
         ----------
         X : pd.DataFrame
@@ -129,15 +119,14 @@ class Pipeline:
         logger.info("Pipeline training completed")
         logger.debug(f"Trained model pipeline layers:\n{self.features}")
 
-    
     def predict(self, X: pd.DataFrame) -> pd.Series:
-        """ Makes predictions using the trained model after transforming the input data.
-        
+        """Makes predictions using the trained model after transforming the input data.
+
         Parameters
         ----------
         X : pd.DataFrame
             The input features for making predictions.
-        
+
         Returns
         -------
         pd.Series
@@ -146,16 +135,15 @@ class Pipeline:
         for transformer in self.__transformers:
             X = transformer.transform(X)
         return self.__model.predict(X)
-    
 
     def predict_proba(self, X: pd.DataFrame) -> pd.DataFrame:
-        """ Makes probability predictions using the trained model after transforming the input data.
-        
+        """Makes probability predictions using the trained model after transforming the input data.
+
         Parameters
         ----------
         X : pd.DataFrame
             The input features for making probability predictions.
-        
+
         Returns
         -------
         pd.DataFrame

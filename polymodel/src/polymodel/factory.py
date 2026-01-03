@@ -1,9 +1,10 @@
-from .pipeline import Pipeline
 from .model.factory import model_factory
+from .pipeline import Pipeline
 from .transformer.factory import transformer_factory
 
+
 def pipeline_factory(model_config, transformer_config) -> Pipeline:
-    """ Create a Pipeline based on the context configuration.
+    """Create a Pipeline based on the context configuration.
 
     Parameters
     ----------
@@ -28,10 +29,12 @@ def pipeline_factory(model_config, transformer_config) -> Pipeline:
     # Create transformers
     transformers = []
     for transformer in transformer_config:
-        transformers.append(transformer_factory(transformer['name'], transformer['hyperparams']))
+        transformers.append(
+            transformer_factory(transformer["name"], transformer["hyperparams"])
+        )
 
     # Create model
-    model = model_factory(model_config['name'], model_config['hyperparams'])
+    model = model_factory(model_config["name"], model_config["hyperparams"])
 
     # Create and return the pipeline
     pipeline = Pipeline(transformers=transformers, model=model)

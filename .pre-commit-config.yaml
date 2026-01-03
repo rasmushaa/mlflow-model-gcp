@@ -1,0 +1,65 @@
+repos:
+  # Basic repository of useful generic hooks maintained by pre-commit.
+  # These are small checks that catch common issues in any repo.
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      # Fails if any file has trailing whitespace. Keeps diffs clean.
+      - id: trailing-whitespace
+
+      # Ensures files end with a single newline; many tools expect this.
+      - id: end-of-file-fixer
+
+      # Validates YAML files for syntax errors. Helpful for CI/workflows.
+      - id: check-yaml
+
+      # Prevent accidentally adding very large files to the repo.
+      - id: check-added-large-files
+
+  # Black is the opinionated Python formatter. It reformats code in a
+  # deterministic way so style reviews are unnecessary.
+  - repo: https://github.com/psf/black
+    rev: 24.10.0
+    hooks:
+      - id: black
+        # Match the project's desired line length; Black will reformat files.
+        args: ["--line-length=88"]
+
+  # isort sorts and groups Python imports. Using the Black profile makes
+  # its output compatible with Black's formatting.
+  - repo: https://github.com/pycqa/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
+        args: ["--profile=black"]
+
+  # flake8 performs linting: finds syntax errors, undefined names, and
+  # style issues. We set a max line length to align with formatting.
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.3.0
+    hooks:
+      - id: flake8
+        args: ["--max-line-length=150", "--extend-ignore=E203"]
+
+  # mypy performs static type checking. It helps catch type errors early.
+  # We ignore missing imports to avoid noisy failures for third-party libs
+  # that don't ship type stubs.
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.10.0
+    hooks:
+      - id: mypy
+        args: ["--ignore-missing-imports"]
+        # Ensure the mypy hook's virtualenv has the PyYAML stubs available
+        # so diagnostics like "Library stubs not installed for 'yaml'" disappear.
+        additional_dependencies: ["types-PyYAML"]
+
+  - repo: local
+    hooks:
+      # Custom hook to ensure version is bumped when source file of Model is changed.
+      - id: check-version-bump
+        name: Check version bump on source changes
+        entry: python3 scripts/check_version_bump.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]

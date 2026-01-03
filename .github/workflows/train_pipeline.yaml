@@ -1,73 +1,30 @@
 name: Build and Deploy to Cloud Run Job
 
-on:
-  push:
-    branches:
-      - main
-
 jobs:
   deploy:
-    if: "${{ github.actor }} != 'github-actions[bot]'"
     runs-on: ubuntu-latest
 
     steps:
+    - name: Init Environment Variables
+      run: |
+        BRANCH="${GITHUB_REF#refs/heads/}"
+        if [ "$BRANCH" = "main" ]; then
+          echo "ENV=main" >> $GITHUB_ENV
+        else
+          echo "ENV=dev" >> $GITHUB_ENV
+        fi
+        IMAGE_URI="${{ secrets.GCP_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mlflow-images/pipeline-${{ env.ENV }}:latest"
+        echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
+        MLFLOW_EXPERIMENT_NAME="Experiment-${{ env.ENV }}"
+        echo "MLFLOW_EXPERIMENT_NAME=$MLFLOW_EXPERIMENT_NAME" >> $GITHUB_ENV
+
     - name: Checkout code
       uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-        persist-credentials: true
 
     - name: Authenticate with Google Cloud
       uses: google-github-actions/auth@v1
       with:
         credentials_json: ${{ secrets.GCP_DEPLOY_SA }}
-
-    - name: Detect polymodel code changes
-      id: model_changes
-      run: |
-        # Compare the range provided by the push event (before -> sha)
-        git fetch --no-tags --prune
-        echo "Comparing ${{ github.event.before }}..${{ github.sha }}"
-        if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E '^polymodel/|^polymodel/src/polymodel/'; then
-          echo "changed=true" >> $GITHUB_OUTPUT
-        else
-          echo "changed=false" >> $GITHUB_OUTPUT
-        fi
-
-    - name: Bump polymodel version (patch)
-      if: steps.model_changes.outputs.changed == 'true'
-      run: |
-        python - <<'PY'
-        from pathlib import Path
-        import re, sys
-
-        TOML_PATH = Path('polymodel/pyproject.toml')
-
-        content = TOML_PATH.read_text(encoding='utf-8')
-        m = re.search(r'(?m)^version\s*=\s*"(?P<ver>\d+\.\d+\.\d+)"', content)
-        if not m:
-            print('version not found in', TOML_PATH)
-            sys.exit(1)
-
-        major, minor, patch = map(int, m.group('ver').split('.'))
-        patch += 1
-        new_version = f"{major}.{minor}.{patch}"
-
-        updated = re.sub(r'version\s*=\s*"[^"]+"', f'version = "{new_version}"', content, count=1)
-        TOML_PATH.write_text(updated, encoding='utf-8')
-        print('bumped', TOML_PATH, 'to', new_version)
-        PY
-
-    - name: Commit & push version bump
-      if: steps.model_changes.outputs.changed == 'true'
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        git config user.name "github-actions[bot]"
-        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-        git add polymodel/pyproject.toml
-        git commit -m "chore(polymodel): bump version [skip ci]"
-        git push
 
     - name: Set up Google Cloud SDK
       uses: google-github-actions/setup-gcloud@v1
@@ -80,22 +37,21 @@ jobs:
 
     - name: Build and Push Docker image
       run: |
-        IMAGE_URI="${{ secrets.GCP_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mlflow-images/pipeline:latest"
-        docker build --build-arg GIT_SHA="${{ github.sha }}" -t "$IMAGE_URI" .
-        docker push "$IMAGE_URI"
+        docker build --build-arg GIT_SHA="${{ github.sha }}" -t "${{ env.IMAGE_URI }}" .
+        docker push "${{ env.IMAGE_URI }}"
 
     - name: Create env-vars.yaml
       run: |
         cat <<EOF > env-vars.yaml
-        MLFLOW_TRACKING_USERNAME: "${{ secrets.MLFLOW_TRACKING_USERNAME }}" 
+        MLFLOW_TRACKING_USERNAME: "${{ secrets.MLFLOW_TRACKING_USERNAME }}"
         MLFLOW_TRACKING_PASSWORD: "${{ secrets.MLFLOW_TRACKING_PASSWORD }}"
-        MLFLOW_EXPERIMENT_NAME: "CICD-Experiment"
+        MLFLOW_EXPERIMENT_NAME: "${{ env.MLFLOW_EXPERIMENT_NAME }}"
         EOF
 
     - name: Deploy Cloud Run Job
       run: |
         gcloud run jobs deploy mlflow-pipeline \
-          --image "${{ secrets.GCP_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mlflow-images/pipeline:latest" \
+          --image "${{ env.IMAGE_URI }}" \
           --region ${{ secrets.GCP_LOCATION }} \
           --service-account ${{ secrets.GCP_MLFLOW_SA_NAME }} \
           --env-vars-file env-vars.yaml \

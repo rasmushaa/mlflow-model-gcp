@@ -1,15 +1,15 @@
 import pandas as pd
-from sklearn.feature_selection import SelectKBest, chi2
 from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_selection import SelectKBest, chi2
 
 
 class KbestTextVector:
-    """ A preprocessor that vectorizes a text column using CountVectorizer,
+    """A preprocessor that vectorizes a text column using CountVectorizer,
     and selects the K best features using chi-squared statistical test.
     """
 
     def __init__(self, text_column: str, kbest: int):
-        """ Initialize the KbestTextVector processor.
+        """Initialize the KbestTextVector processor.
 
         Parameters
         ----------
@@ -23,14 +23,12 @@ class KbestTextVector:
         self.__selector = SelectKBest(score_func=chi2, k=self.__kbest)
         self.__vectorizer = CountVectorizer()
 
-
     def __repr__(self):
         return f"{self.__class__.__name__}(text_column={self.__text_column!r}, kbest={self.__kbest!r})"
-    
 
     @property
     def features(self):
-        """ Get the list of selected features after fitting.
+        """Get the list of selected features after fitting.
 
         Returns
         -------
@@ -39,9 +37,8 @@ class KbestTextVector:
         """
         return [self.__text_column]
 
-
     def fit(self, X: pd.DataFrame, y: pd.Series) -> None:
-        """ Fit the processor to the input DataFrame.
+        """Fit the processor to the input DataFrame.
 
         Parameters
         ----------
@@ -63,9 +60,8 @@ class KbestTextVector:
         self.__feature_names = self.__vectorizer.get_feature_names_out()
         self.__selected_features = self.__feature_names[self.__selector.get_support()]
 
-
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:
-        """ Transform the input DataFrame using the fitted processor.
+        """Transform the input DataFrame using the fitted processor.
 
         The specified text column is replaced with the selected K best features,
         on the same position as the original column.
@@ -87,7 +83,7 @@ class KbestTextVector:
 
         # Select K best features
         text_selected = self.__selector.transform(text_vectorized)
-        
+
         # Insert selected features back into DataFrame at original column position
         orig_idx = X.columns.get_loc(self.__text_column)
 
@@ -96,16 +92,19 @@ class KbestTextVector:
         right_df = X.iloc[:, orig_idx + 1 :].reset_index(drop=True)
 
         # Selected features as DataFrame
-        selected_df = pd.DataFrame(text_selected, columns=self.__selected_features).reset_index(drop=True)
+        selected_df = pd.DataFrame(
+            text_selected, columns=self.__selected_features
+        ).reset_index(drop=True)
 
         # Concatenate: left + selected features (starting at orig_idx) + original right columns (kept last)
         transformed_df = pd.concat([left_df, selected_df, right_df], axis=1)
 
-        return transformed_df.astype(float) # Python int can not contain NaNs, resulting potential unexpected castings aftwards
-    
+        return transformed_df.astype(
+            float
+        )  # Python int can not contain NaNs, resulting potential unexpected castings aftwards
 
     def fit_transform(self, X: pd.DataFrame, y: pd.Series) -> pd.DataFrame:
-        """ Fit the processor to the input DataFrame and then transform it.
+        """Fit the processor to the input DataFrame and then transform it.
 
         Parameters
         ----------
@@ -121,4 +120,3 @@ class KbestTextVector:
         """
         self.fit(X, y)
         return self.transform(X)
-    

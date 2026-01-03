@@ -1,10 +1,11 @@
 import logging
 import sys
 
+
 def setup_logging(level=logging.DEBUG, logfile="app.log"):
     formatter = logging.Formatter(
         fmt="%(asctime)s [%(levelname)s] %(filename)s:%(lineno)d "
-            "%(funcName)s() [%(name)s] - %(message)s",
+        "%(funcName)s() [%(name)s] - %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
