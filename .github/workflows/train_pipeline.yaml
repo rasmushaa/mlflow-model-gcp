@@ -51,6 +51,9 @@ jobs:
         MLFLOW_TRACKING_USERNAME: "${{ secrets.MLFLOW_TRACKING_USERNAME }}"
         MLFLOW_TRACKING_PASSWORD: "${{ secrets.MLFLOW_TRACKING_PASSWORD }}"
         MLFLOW_EXPERIMENT_NAME: "${{ env.MLFLOW_EXPERIMENT_NAME }}"
+        GCP_PROJECT_ID: "${{ secrets.GCP_PROJECT_ID }}"
+        GCP_LOCATION: "${{ secrets.GCP_LOCATION }}"
+        GCP_BQ_DATASET: "${{ secrets.GCP_BQ_DATASET }}"
         EOF
 
     - name: Deploy Cloud Run Job
