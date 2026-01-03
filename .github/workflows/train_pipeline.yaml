@@ -13,16 +13,15 @@ jobs:
     steps:
     - name: Init Environment Variables
       run: |
-        BRANCH="${GITHUB_REF#refs/heads/}"
-        if [ "$BRANCH" = "main" ]; then
+        if [ "${{ github.ref_name }}" == "main" ]; then
           echo "ENV=main" >> $GITHUB_ENV
+          echo "IMAGE_URI=${{ secrets.GCP_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mlflow-images/pipeline-main:latest" >> $GITHUB_ENV
+          echo "MLFLOW_EXPERIMENT_NAME=Experiment-main" >> $GITHUB_ENV
         else
           echo "ENV=dev" >> $GITHUB_ENV
+          echo "IMAGE_URI=${{ secrets.GCP_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mlflow-images/pipeline-dev:latest" >> $GITHUB_ENV
+          echo "MLFLOW_EXPERIMENT_NAME=Experiment-dev" >> $GITHUB_ENV
         fi
-        IMAGE_URI="${{ secrets.GCP_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mlflow-images/pipeline-${ENV}:latest"
-        echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
-        MLFLOW_EXPERIMENT_NAME="Experiment-${ENV}"
-        echo "MLFLOW_EXPERIMENT_NAME=$MLFLOW_EXPERIMENT_NAME" >> $GITHUB_ENV
 
     - name: Checkout code
       uses: actions/checkout@v3
