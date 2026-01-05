@@ -5,12 +5,11 @@ from datetime import datetime
 from typing import Optional
 
 import joblib
+import mlflow
 import numpy as np
 import pandas as pd
 
-import mlflow
-
-from .package import get_current_version
+from package import get_current_version
 
 logger = logging.getLogger(__name__)
 
@@ -256,9 +255,11 @@ class ExperimentManager:
             The DataFrame containing only the features used by the model
         """
         input_example = data_example.iloc[:5]
-        input_example = input_example[
-            pipeline.features[0]["features"]
-        ]  # In case of extra RawFeatures
+        # In case of transformers, select only the features used by the pipeline (FeatureSelector, etc)
+        first_layer = pipeline.layers[0]
+        if "signature" in first_layer:  # Only transformers have signature
+            input_example = input_example[first_layer["features"]]
+
         return input_example
 
     def __find_or_create_experiment(self):
@@ -291,9 +292,9 @@ class ExperimentManager:
         and model package version.
         """
         version = get_current_version()
-        git_sha = os.getenv("GIT_COMMIT_SHA", "unknown")
-        git_username = os.getenv("GIT_COMMIT_USERNAME", "unknown")
-        git_author_name = os.getenv("GIT_COMMIT_AUTHOR_NAME", "unknown")
+        git_sha = os.getenv("GIT_COMMIT_SHA")
+        git_username = os.getenv("GIT_COMMIT_USERNAME")
+        git_author_name = os.getenv("GIT_COMMIT_AUTHOR_NAME")
 
         mlflow.set_tags(
             {

@@ -1,14 +1,13 @@
 import logging
 
+from context import Context
+from experiment import ExperimentManager
+from loader import DataLoader
+from ml.metrics import evaluate_model, kfold_report_metrics
+from ml.processing import kfold_iterator
+from package import get_wheel_path, wheel_exists
 from polymodel.factory import pipeline_factory
-from src.context import Context
-from src.loader import DataLoader
-from src.logging import setup_logging
-from src.mlflow import ExperimentManager
-from src.package import get_wheel_path, wheel_exists
-
-from .ml.metrics import evaluate_model, kfold_report_metrics
-from .ml.processing import kfold_iterator
+from setup_logging import setup_logging
 
 setup_logging(level=logging.INFO)
 
