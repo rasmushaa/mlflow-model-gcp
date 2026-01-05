@@ -1,14 +1,16 @@
 import logging
 
-from data.loader import DataLoader
 from polymodel.factory import pipeline_factory
-from utils.context import Context
-from utils.ml.metrics import evaluate_model, kfold_report_metrics
-from utils.ml.processing import kfold_iterator
-from utils.mlflow import ExperimentManager
-from utils.setup_logging import setup_logging
+from src.context import Context
+from src.loader import DataLoader
+from src.logging import setup_logging
+from src.mlflow import ExperimentManager
+from src.package import get_wheel_path, wheel_exists
 
-setup_logging(level=logging.DEBUG)
+from .ml.metrics import evaluate_model, kfold_report_metrics
+from .ml.processing import kfold_iterator
+
+setup_logging(level=logging.INFO)
 
 
 def main():
@@ -19,7 +21,7 @@ def main():
 
     with manager.start_run():
 
-        # Log all config parameters here
+        # Log all config parameters using dot notation
         manager.log_params(context.ravel())
 
         # Load and log data
@@ -41,7 +43,7 @@ def main():
             metrics, plots = evaluate_model(pipeline, X_test, y_test)
             kfold_data[f"fold{fold}"] = {"metrics": metrics, "plots": plots}
 
-            # Log fold traces for macro metrics
+            # Log fold traces to detect overfitting on the main metrics
             for metric_name, metric_value in metrics.items():
                 if "macro" in metric_name or "accuracy" in metric_name:
                     manager.log_metrics(
@@ -49,22 +51,26 @@ def main():
                     )
 
         # Final model training on full data for model registry
-        X_full = data.drop(columns=[context["training"]["target_column"]])
-        y_full = data[context["training"]["target_column"]]
-        pipeline = pipeline_factory(context["model"], context["transformer"])
-        pipeline.fit(X_full, y_full)
-        manager.log_model(pipeline, data_example=X_full, wheel_dir="./dist/")
+        if wheel_exists():
+            X_full = data.drop(columns=[context["training"]["target_column"]])
+            y_full = data[context["training"]["target_column"]]
+            pipeline = pipeline_factory(context["model"], context["transformer"])
+            pipeline.fit(X_full, y_full)
+            manager.log_model(
+                pipeline, data_example=X_full, wheel_path=get_wheel_path()
+            )
+        else:
+            logging.warning(
+                "Model wheel file version specified on pyproject.toml not found. Skipping model logging to MLflow."
+            )
 
-        # Log component features
-        manager.log_dict(pipeline.features, "layers")
-        manager.log_text(str(pipeline), "pipeline")
-        manager.log_params({"architecture": pipeline.architecture})
+        # Log pipeline architecture and layers
+        manager.log_dict(pipeline.layers, "layers")
+        manager.set_tags({"architecture": pipeline.architecture})
 
         # Aggregate K-Fold results for individual folds
         # Metrics has to be logged after model logging to avoid duplication issues due this Bug: https://github.com/ecmwf/anemoi-core/issues/190
-        metrics, plots = kfold_report_metrics(
-            kfold_data
-        )  # Aggregate metrics, and concatenate plots
+        metrics, plots = kfold_report_metrics(kfold_data)
         manager.log_figures(plots)
         manager.log_metrics(metrics)
 

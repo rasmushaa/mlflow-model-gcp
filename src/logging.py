@@ -1,3 +1,10 @@
+"""
+The module sets up logging configuration for the application.
+It configures logging to output messages to both the console and a log file,
+with a specified format and logging level.
+This should be called at the start of the application to ensure consistent logging behavior.
+"""
+
 import logging
 import sys
 

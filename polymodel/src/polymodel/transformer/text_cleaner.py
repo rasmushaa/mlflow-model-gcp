@@ -9,13 +9,19 @@ class TextCleaner:
         text_column : str
             The name of the text column to clean.
         """
+        self.__signature = []
         self.__text_column = text_column
 
     def __repr__(self):
         return f"{self.__class__.__name__}(text_column={self.__text_column!r})"
 
     @property
-    def features(self):
+    def signature(self) -> list[str]:
+        """Get the list of input features signature."""
+        return self.__signature
+
+    @property
+    def features(self) -> list[str]:
         """Get the list of features used by the transformer.
 
         Returns
@@ -26,8 +32,8 @@ class TextCleaner:
         return [self.__text_column]
 
     def fit(self, X, y=None):
-        """A mock fit method for compatibility. Does nothing."""
-        pass
+        """Fit the transformer to the input DataFrame."""
+        self.__signature = X.columns.tolist()
 
     def transform(self, X):
         """Transform the input data by cleaning the text column."""

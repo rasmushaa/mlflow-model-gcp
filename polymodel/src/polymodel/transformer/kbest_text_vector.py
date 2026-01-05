@@ -20,6 +20,7 @@ class KbestTextVector:
         """
         self.__text_column = text_column
         self.__kbest = kbest
+        self.__signature: list[str] = []
         self.__selector = SelectKBest(score_func=chi2, k=self.__kbest)
         self.__vectorizer = CountVectorizer()
 
@@ -27,7 +28,18 @@ class KbestTextVector:
         return f"{self.__class__.__name__}(text_column={self.__text_column!r}, kbest={self.__kbest!r})"
 
     @property
-    def features(self):
+    def signature(self) -> list[str]:
+        """Get the list of input features signature.
+
+        Returns
+        -------
+        list
+            The list of input features signature. Empty before fitting.
+        """
+        return self.__signature
+
+    @property
+    def features(self) -> list[str]:
         """Get the list of selected features after fitting.
 
         Returns
@@ -47,6 +59,8 @@ class KbestTextVector:
         y: pd.Series
             Target variable for feature selection.
         """
+        self.__signature = X.columns.tolist()
+
         X = X[self.__text_column]
         y = y
 

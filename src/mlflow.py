@@ -5,11 +5,12 @@ from datetime import datetime
 from typing import Optional
 
 import joblib
-import mlflow
 import numpy as np
 import pandas as pd
 
-from .package import get_current_version, get_hash_of_file
+import mlflow
+
+from .package import get_current_version
 
 logger = logging.getLogger(__name__)
 
@@ -155,7 +156,17 @@ class ExperimentManager:
         for name, fig in figures_dict.items():
             mlflow.log_figure(fig, f"plot/{name}.png")
 
-    def log_model(self, pipeline, data_example: pd.DataFrame, wheel_dir: str):
+    def set_tags(self, tags: dict):
+        """Set tags to the current MLflow run.
+
+        Parameters
+        ----------
+        tags: dict
+            A dictionary of tags to set
+        """
+        mlflow.set_tags(tags)
+
+    def log_model(self, pipeline, data_example: pd.DataFrame, wheel_path: str):
         """Log a MLflow model artifact to the current MLflow run.
 
         Parameters
@@ -169,37 +180,11 @@ class ExperimentManager:
         """
         MODEL_NAME = "TransactionModel"
 
-        # Create artifacts directory if it doesn't exist
-        os.makedirs("artifacts", exist_ok=True)
-
-        # Save model to temporary file
-        artifact_paths = {"pipeline": "artifacts/pipeline.pkl"}
-        joblib.dump(pipeline, artifact_paths["pipeline"])
-
-        # Add model package wheel as artifact
-        wheel_path = None
-        for file in os.listdir(wheel_dir):
-            if file.endswith(".whl") and "polymodel" in file:
-                wheel_path = os.path.join(wheel_dir, file)
-                break
-        if wheel_path is None:
-            raise FileNotFoundError(
-                f"No polymodel wheel file found in directory: {wheel_dir}"
-            )
-        wheel_dst = f"artifacts/{os.path.basename(wheel_path)}"
-        shutil.copy(wheel_path, wheel_dst)
-        artifact_paths["wheel"] = wheel_dst
+        # Save model artifacts to local temp directory
+        artifact_paths = self.__save_model_artifacts_to_local(pipeline, wheel_path)
 
         # Prepare input example
-        input_example = data_example.iloc[:5]
-        input_example = input_example[
-            pipeline.features[0]["features"]
-        ]  # In case of extra RawFeatures
-
-        # Prepare pip requirements with explicit versions
-        pip_reqs = [
-            f"polymodel @ file://{{ARTIFACT_PATH}}/{os.path.basename(wheel_path)}",
-        ]
+        input_example = self.__create_model_input_example(data_example, pipeline)
 
         # Log the model with artifacts (code-based model using wrapper.py)
         logged_model = mlflow.pyfunc.log_model(
@@ -207,7 +192,9 @@ class ExperimentManager:
             python_model="polymodel/src/polymodel/wrapper.py",
             artifacts=artifact_paths,
             input_example=input_example,
-            pip_requirements=pip_reqs,
+            pip_requirements=[
+                f"polymodel @ file://{{ARTIFACT_PATH}}/{os.path.basename(wheel_path)}"
+            ],
         )
 
         # Register the model to the MLflow Model Registry
@@ -221,8 +208,58 @@ class ExperimentManager:
             name=MODEL_NAME, alias="challenger", version=registered_model.version
         )
 
-        # Clean up temporary artifacts directory
-        shutil.rmtree("artifacts")
+    def __save_model_artifacts_to_local(
+        self, pipeline, wheel_path: str
+    ) -> dict[str, str]:
+        """Save model artifacts to local 'artifacts/' directory.
+
+        The 'artifacts/' directory is created or overwritten.
+
+        Parameters
+        ----------
+        pipeline:
+            The trained model pipeline to save
+        wheel_path: str
+            The path to the model package wheel file
+
+        Returns
+        -------
+        artifact_paths: dict
+            A dictionary with paths to the saved artifacts
+        """
+        artifact_paths = {
+            "pipeline": "artifacts/pipeline.pkl",
+            "wheel": f"artifacts/{os.path.basename(wheel_path)}",
+        }
+        if os.path.exists("artifacts"):
+            shutil.rmtree("artifacts")
+        os.makedirs("artifacts", exist_ok=True)
+        joblib.dump(pipeline, artifact_paths["pipeline"])
+        shutil.copy(wheel_path, artifact_paths["wheel"])
+        return artifact_paths
+
+    def __create_model_input_example(
+        self, data_example: pd.DataFrame, pipeline
+    ) -> pd.DataFrame:
+        """Create a small model input example DataFrame from the actual training data.
+
+        Parameters
+        ----------
+        data_example: pd.DataFrame
+            A small sample DataFrame to extract features from
+        pipeline:
+            The trained model pipeline containing feature information
+
+        Returns
+        -------
+        input_example: pd.DataFrame
+            The DataFrame containing only the features used by the model
+        """
+        input_example = data_example.iloc[:5]
+        input_example = input_example[
+            pipeline.features[0]["features"]
+        ]  # In case of extra RawFeatures
+        return input_example
 
     def __find_or_create_experiment(self):
         """Find an existing MLflow experiment by name,
@@ -251,17 +288,19 @@ class ExperimentManager:
         """Log default parameters to the new MLflow run.
 
         The default parameters include Git metadata for reproducibility,
-        and model package version and hash.
+        and model package version.
         """
         version = get_current_version()
-        file_hash = get_hash_of_file()
-        git_sha = os.getenv("GIT_COMMIT_SHA")
+        git_sha = os.getenv("GIT_COMMIT_SHA", "unknown")
+        git_username = os.getenv("GIT_COMMIT_USERNAME", "unknown")
+        git_author_name = os.getenv("GIT_COMMIT_AUTHOR_NAME", "unknown")
 
         mlflow.set_tags(
             {
                 "model.package.version": version,
-                "model.package.hash": file_hash,
                 "git.commit.sha": git_sha,
+                "git.commit.user": git_username,
+                "git.commit.author": git_author_name,
             }
         )
 

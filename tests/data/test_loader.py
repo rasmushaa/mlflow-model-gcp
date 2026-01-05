@@ -6,7 +6,7 @@ from unittest.mock import patch
 import duckdb
 import pandas as pd
 
-from src.data.loader import DataLoader
+from src.loader import DataLoader
 
 
 class TestDataLoader(unittest.TestCase):

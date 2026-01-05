@@ -69,6 +69,9 @@ def plot_classification_metrics(ax: plt.Axes, metrics: dict) -> plt.Axes:
     ax.set_ylabel("")
     ax.set_yticklabels([])
     ax.tick_params(axis="x", rotation=90)
+    ax.set_axisbelow(True)
+    ax.grid(axis="y", ls="--", alpha=0.7, color="gray")
+
     plt.tight_layout()
     return ax
 

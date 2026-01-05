@@ -46,6 +46,17 @@ class Pipeline:
         return str
 
     @property
+    def model(self) -> ModelInterface:
+        """Get the model used in the pipeline.
+
+        Returns
+        -------
+        ModelInterface
+            The machine learning model instance.
+        """
+        return self.__model
+
+    @property
     def architecture(self) -> str:
         """Get a string representation of the pipeline architecture.
 
@@ -59,7 +70,7 @@ class Pipeline:
         return arch
 
     @property
-    def features(self) -> dict:
+    def layers(self) -> dict:
         """Get the signatures of the transformers and model in the pipeline.
 
         Returns
@@ -71,6 +82,7 @@ class Pipeline:
         for i, transformer in enumerate(self.__transformers):
             entry = {
                 "name": transformer.__class__.__name__,
+                "signature": transformer.signature,
                 "features": transformer.features,
             }
             signatures[i] = entry
@@ -79,28 +91,6 @@ class Pipeline:
             "features": self.__model.features,
         }
         return signatures
-
-    @property
-    def model(self) -> ModelInterface:
-        """Get the model used in the pipeline.
-
-        Returns
-        -------
-        ModelInterface
-            The machine learning model used in the pipeline.
-        """
-        return self.__model
-
-    @property
-    def transformers(self) -> List[TransformerInterface]:
-        """Get the list of transformers used in the pipeline.
-
-        Returns
-        -------
-        List[TransformerInterface]
-            The list of transformer instances used in the pipeline.
-        """
-        return self.__transformers
 
     def fit(self, X: pd.DataFrame, y: pd.Series) -> None:
         """Fits the transformers and the model on the training data.
@@ -112,12 +102,12 @@ class Pipeline:
         y : pd.Series
             The target labels for training.
         """
-        logger.info("Starting pipeline training")
+        logger.info("Start pipeline training")
         for transformer in self.__transformers:
             X = transformer.fit_transform(X, y)
         self.__model.fit(X, y)
-        logger.info("Pipeline training completed")
-        logger.debug(f"Trained model pipeline layers:\n{self.features}")
+        logger.info("End pipeline training")
+        logger.debug(f"Trained model pipeline layers:\n{self.layers}")
 
     def predict(self, X: pd.DataFrame) -> pd.Series:
         """Makes predictions using the trained model after transforming the input data.

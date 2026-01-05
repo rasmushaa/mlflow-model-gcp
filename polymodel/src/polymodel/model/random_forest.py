@@ -11,10 +11,10 @@ class RandomForestModel(RandomForestClassifier):
         super().__init__(**hyperparams)
 
     def __repr__(self) -> str:
-        return super().__repr__()
+        return str(super())
 
     @property
-    def features(self) -> list:
+    def features(self) -> list[str]:
         """Get the feature names used by the model.
 
         Returns
