@@ -68,6 +68,7 @@ class DataLoader:
         WHERE
             category != 'N/A'
             AND receiver is not NULL
+            AND receiver != 'missing'
             {start_filtter}
             {end_filtter}
         ORDER BY

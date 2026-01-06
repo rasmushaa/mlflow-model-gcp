@@ -177,7 +177,9 @@ class ExperimentManager:
         wheel_dir: str
             The directory containing the model package wheel file
         """
-        MODEL_NAME = "TransactionModel"
+        # The registered model name matches the runtime env (e.g., BankingModel-dev)
+        model_name = os.getenv("MLFLOW_MODEL_NAME")
+        assert model_name, "MLFLOW_MODEL_NAME environment variable is not set."
 
         # Save model artifacts to local temp directory
         artifact_paths = self.__save_model_artifacts_to_local(pipeline, wheel_path)
@@ -196,15 +198,16 @@ class ExperimentManager:
             ],
         )
 
-        # Register the model to the MLflow Model Registry
-        registered_model = mlflow.register_model(
-            f"models:/{logged_model.model_uri.split('/')[-1]}", MODEL_NAME
-        )
-
-        # Set an alias for the registered model version
-        client = mlflow.MlflowClient()
-        client.set_registered_model_alias(
-            name=MODEL_NAME, alias="challenger", version=registered_model.version
+        # Register the model to the MLflow Model Registry. Todo: alias the returned version
+        _ = mlflow.register_model(
+            f"models:/{logged_model.model_uri.split('/')[-1]}",
+            model_name,
+            tags={
+                "model.package.version": get_current_version(),
+                "git.commit.sha": os.getenv("GIT_COMMIT_SHA"),
+                "model.features": pipeline.features,
+                "model.architecture": pipeline.architecture,
+            },
         )
 
     def __save_model_artifacts_to_local(
@@ -255,11 +258,7 @@ class ExperimentManager:
             The DataFrame containing only the features used by the model
         """
         input_example = data_example.iloc[:5]
-        # In case of transformers, select only the features used by the pipeline (FeatureSelector, etc)
-        first_layer = pipeline.layers[0]
-        if "signature" in first_layer:  # Only transformers have signature
-            input_example = input_example[first_layer["features"]]
-
+        input_example = input_example[pipeline.features]  # Use only required features
         return input_example
 
     def __find_or_create_experiment(self):

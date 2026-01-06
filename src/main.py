@@ -65,7 +65,9 @@ def main():
 
         # Log pipeline architecture and layers
         manager.log_dict(pipeline.layers, "layers")
-        manager.set_tags({"architecture": pipeline.architecture})
+        manager.set_tags({"model.architecture": pipeline.architecture})
+        manager.set_tags({"model.signature": pipeline.signature})
+        manager.set_tags({"model.features": pipeline.features})
 
         # Aggregate K-Fold results for individual folds
         # Metrics has to be logged after model logging to avoid duplication issues due this Bug: https://github.com/ecmwf/anemoi-core/issues/190
