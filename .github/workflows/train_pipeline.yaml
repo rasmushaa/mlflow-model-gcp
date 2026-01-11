@@ -50,7 +50,8 @@ jobs:
 
     - name: Upload polymodel package wheel as artifact
       run: |
-        uv pip install --system twine
+        uv venv
+        uv pip install twine
         export TWINE_USERNAME="__token__"
         export TWINE_PASSWORD="$(gcloud auth print-access-token)"
         twine upload \
