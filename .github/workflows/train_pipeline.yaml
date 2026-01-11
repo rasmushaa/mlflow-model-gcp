@@ -57,7 +57,6 @@ jobs:
         twine upload \
           --repository-url https://${{ secrets.GCP_LOCATION }}-python.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/python-packages/ \
           ./polymodel_dist/* \
-          || echo "Package version already exists, skipping"
 
     - name: Configure Docker to use gcloud as a credential helper
       run: |
