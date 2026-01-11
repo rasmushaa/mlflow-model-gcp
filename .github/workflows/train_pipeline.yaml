@@ -52,7 +52,7 @@ jobs:
       run: |
         uv venv
         uv pip install twine
-        export TWINE_USERNAME="__token__"
+        export TWINE_USERNAME="oauth2accesstoken"
         export TWINE_PASSWORD="$(gcloud auth print-access-token)"
         uv run twine upload \
           --repository-url https://${{ secrets.GCP_LOCATION }}-python.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/python-packages/ \
