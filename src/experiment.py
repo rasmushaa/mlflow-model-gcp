@@ -9,7 +9,7 @@ import mlflow
 import numpy as np
 import pandas as pd
 
-from package import get_current_version
+from package import get_installed_polymodel_version, get_next_polymodel_major_version
 
 logger = logging.getLogger(__name__)
 
@@ -182,10 +182,17 @@ class ExperimentManager:
         assert model_name, "MLFLOW_MODEL_NAME environment variable is not set."
 
         # Save model artifacts to local temp directory
-        artifact_paths = self.__save_model_artifacts_to_local(pipeline, wheel_path)
+        artifact_paths = self.__save_model_artifacts_to_local(pipeline)
 
         # Prepare input example
         input_example = self.__create_model_input_example(data_example, pipeline)
+
+        # Log polymodel version constraints
+        current_version = get_installed_polymodel_version()
+        max_version = get_next_polymodel_major_version()
+        logger.info(
+            f"Logging model with polymodel version constraint: >= {current_version}, < {max_version}"
+        )
 
         # Log the model with artifacts (code-based model using wrapper.py)
         logged_model = mlflow.pyfunc.log_model(
@@ -194,7 +201,7 @@ class ExperimentManager:
             artifacts=artifact_paths,
             input_example=input_example,
             pip_requirements=[
-                f"polymodel @ file://{{ARTIFACT_PATH}}/{os.path.basename(wheel_path)}"
+                f"polymodel>={current_version},<{max_version}",
             ],
         )
 
@@ -203,16 +210,14 @@ class ExperimentManager:
             f"models:/{logged_model.model_uri.split('/')[-1]}",
             model_name,
             tags={
-                "model.package.version": get_current_version(),
+                "model.package.version": get_installed_polymodel_version(),
                 "git.commit.sha": os.getenv("GIT_COMMIT_SHA"),
                 "model.features": pipeline.features,
                 "model.architecture": pipeline.architecture,
             },
         )
 
-    def __save_model_artifacts_to_local(
-        self, pipeline, wheel_path: str
-    ) -> dict[str, str]:
+    def __save_model_artifacts_to_local(self, pipeline) -> dict[str, str]:
         """Save model artifacts to local 'artifacts/' directory.
 
         The 'artifacts/' directory is created or overwritten.
@@ -221,8 +226,6 @@ class ExperimentManager:
         ----------
         pipeline:
             The trained model pipeline to save
-        wheel_path: str
-            The path to the model package wheel file
 
         Returns
         -------
@@ -231,13 +234,11 @@ class ExperimentManager:
         """
         artifact_paths = {
             "pipeline": "artifacts/pipeline.pkl",
-            "wheel": f"artifacts/{os.path.basename(wheel_path)}",
         }
         if os.path.exists("artifacts"):
             shutil.rmtree("artifacts")
         os.makedirs("artifacts", exist_ok=True)
         joblib.dump(pipeline, artifact_paths["pipeline"])
-        shutil.copy(wheel_path, artifact_paths["wheel"])
         return artifact_paths
 
     def __create_model_input_example(
@@ -290,7 +291,7 @@ class ExperimentManager:
         The default parameters include Git metadata for reproducibility,
         and model package version.
         """
-        version = get_current_version()
+        version = get_installed_polymodel_version()
         git_sha = os.getenv("GIT_COMMIT_SHA")
         git_username = os.getenv("GIT_COMMIT_USERNAME")
         git_author_name = os.getenv("GIT_COMMIT_AUTHOR_NAME")

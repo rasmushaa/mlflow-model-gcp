@@ -5,7 +5,6 @@ from experiment import ExperimentManager
 from loader import DataLoader
 from ml.metrics import evaluate_model, kfold_report_metrics
 from ml.processing import kfold_iterator
-from package import get_wheel_path, wheel_exists
 from polymodel.factory import pipeline_factory
 from setup_logging import setup_logging
 
@@ -50,18 +49,11 @@ def main():
                     )
 
         # Final model training on full data for model registry
-        if wheel_exists():
-            X_full = data.drop(columns=[context["training"]["target_column"]])
-            y_full = data[context["training"]["target_column"]]
-            pipeline = pipeline_factory(context["model"], context["transformer"])
-            pipeline.fit(X_full, y_full)
-            manager.log_model(
-                pipeline, data_example=X_full, wheel_path=get_wheel_path()
-            )
-        else:
-            logging.warning(
-                "Model wheel file version specified on pyproject.toml not found. Skipping model logging to MLflow."
-            )
+        X_full = data.drop(columns=[context["training"]["target_column"]])
+        y_full = data[context["training"]["target_column"]]
+        pipeline = pipeline_factory(context["model"], context["transformer"])
+        pipeline.fit(X_full, y_full)
+        manager.log_model(pipeline, data_example=X_full)
 
         # Log pipeline architecture and layers
         manager.log_dict(pipeline.layers, "layers")

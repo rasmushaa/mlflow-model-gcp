@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - stg
       - dev
 
 jobs:
@@ -18,10 +17,6 @@ jobs:
           echo "IMAGE_URI=${{ secrets.GCP_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mlflow-images/pipeline-main:latest" >> $GITHUB_ENV
           echo "MLFLOW_EXPERIMENT_NAME=Experiment-main" >> $GITHUB_ENV
           echo "MLFLOW_MODEL_NAME=BankingModel-main" >> $GITHUB_ENV
-        elif [ "${{ github.ref_name }}" == "stg" ]; then
-          echo "IMAGE_URI=${{ secrets.GCP_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mlflow-images/pipeline-stg:latest" >> $GITHUB_ENV
-          echo "MLFLOW_EXPERIMENT_NAME=Experiment-stg" >> $GITHUB_ENV
-          echo "MLFLOW_MODEL_NAME=BankingModel-stg" >> $GITHUB_ENV
         else
           echo "IMAGE_URI=${{ secrets.GCP_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mlflow-images/pipeline-dev:latest" >> $GITHUB_ENV
           echo "MLFLOW_EXPERIMENT_NAME=Experiment-dev" >> $GITHUB_ENV
@@ -43,6 +38,25 @@ jobs:
       uses: google-github-actions/setup-gcloud@v1
       with:
         project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v7
+      with:
+          version: "0.9.9"
+
+    - name: Build polymodel package wheel
+      run: |
+        uv build polymodel/ --out-dir ./polymodel_dist/
+
+    - name: Upload polymodel package wheel as artifact
+      run: |
+        uv pip install twine
+        export TWINE_USERNAME="__token__"
+        export TWINE_PASSWORD="$(gcloud auth print-access-token)"
+        twine upload \
+          --repository-url https://${{ secrets.GCP_LOCATION }}-python.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/python-packages/ \
+          ./polymodel_dist/* \
+          || echo "Package version already exists, skipping"
 
     - name: Configure Docker to use gcloud as a credential helper
       run: |

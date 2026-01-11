@@ -1,63 +1,39 @@
 import logging
-import pathlib
 import re
+from importlib.metadata import version
 
 logger = logging.getLogger(__name__)
 
-# The model wheel source directory
-MODEL_SRC = pathlib.Path("./polymodel")
-TOML_PATH = MODEL_SRC / "pyproject.toml"
+PACKAGE = "polymodel"
 
 
-def get_current_version() -> str:
-    """Get the current version of the model package from pyproject.toml.
+def get_installed_polymodel_version() -> str:
+    """Get the installed runtime version of the polymodel package.
 
     Returns
     -------
     version: str
-        The current version string, e.g., "1.0.1"
+        The installed version string, e.g., "1.0.1"
     """
-    content = TOML_PATH.read_text()
-    match = re.search(r'version = "(\d+)\.(\d+)\.(\d+)"', content)
-    if match:
-        major, minor, patch = match.groups()
-        return f"{major}.{minor}.{patch}"
-
-    return "0.0.0"
+    return version(PACKAGE)
 
 
-def get_wheel_path() -> pathlib.Path:
-    """Get the path to matching wheel file in the dist/ directory.
+def get_next_polymodel_major_version() -> str:
+    """Get the next major version string for the polymodel package.
+
+    If the current version is "1.2.3", the next major version will be "2.0.0".
+    This is useful for setting version constraints in dependencies.
 
     Returns
     -------
-    wheel_path: pathlib.Path
-        The path to the wheel file
+    next_version: str
+        The next major version string, e.g., "2.0.0"
     """
-    dist_dir = MODEL_SRC / "dist"
-    version = get_current_version()
-    wheel_pattern = f"polymodel-{version}-py3-none-any.whl"
-    wheel_path = dist_dir / wheel_pattern
-    return wheel_path
+    current_version = get_installed_polymodel_version()
+    major_version_match = re.match(r"(\d+)\..*", current_version)
 
+    if major_version_match:
+        major_version = int(major_version_match.group(1))
+        return f"{major_version + 1}.0.0"
 
-def wheel_exists() -> bool:
-    """Check if a matching wheel file exists in the dist/ directory.
-
-    The wheel should always exist since it is built during the Docker build process.
-    This function mainly serves as a sanity check before logging the model to MLflow,
-    and to handle local development scenarios where the wheel might not have been built manually.
-
-    Returns
-    -------
-    exists: bool
-        True if the wheel file exists, False otherwise
-    """
-    dist_dir = MODEL_SRC / "dist"
-    version = get_current_version()
-    wheel_pattern = f"polymodel-{version}-py3-none-any.whl"
-    wheel_path = dist_dir / wheel_pattern
-    exists = wheel_path.exists()
-    if not exists:
-        logger.warning(f"Wheel file not found: {wheel_path} at {dist_dir}")
-    return exists
+    raise ValueError(f"Invalid version format: {current_version}")

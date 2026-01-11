@@ -16,9 +16,6 @@ COPY config.yaml /app/config.yaml
 # Use system Python (no venv)
 RUN uv pip install --system -r pyproject.toml
 
-# Build polymodel to include the package wheel
-RUN uv build polymodel/ --out-dir /app/polymodel/dist/
-
 # The commit SHA should be passed as a build argument to connect the mlflow run to code version
 ARG GIT_SHA
 ENV GIT_COMMIT_SHA=${GIT_SHA}
