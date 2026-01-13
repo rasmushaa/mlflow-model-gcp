@@ -1,5 +1,9 @@
 name: Build and Deploy to Cloud Run Job
 
+permissions:
+  contents: 'read'
+  id-token: 'write' # This is crucial for Workload Identity Federation
+
 on:
   push:
     branches:
@@ -33,7 +37,7 @@ jobs:
     - name: Upload polymodel package wheel as artifact
       run: |
         uv venv
-        uv sync --dev # Install dev dependencies rom repo pyproject.toml
+        uv sync --dev # Install dev dependencies from repo pyproject.toml
         uv run twine upload \
           --repository-url https://${{ secrets.GCP_LOCATION }}-python.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/python-packages/ \
           ./polymodel_dist/* --verbose \
