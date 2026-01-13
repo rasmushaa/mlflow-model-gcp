@@ -40,8 +40,7 @@ jobs:
         uv sync --dev # Install dev dependencies from repo pyproject.toml
         uv run twine upload \
           --repository-url https://${{ secrets.GCP_LOCATION }}-python.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/python-packages/ \
-          ./polymodel_dist/* --verbose \
-          || echo "Error uploading package to Artifact Registry (Or it may already exist)"
+          ./polymodel_dist/* --verbose
 
   deploy_job:
     runs-on: ubuntu-latest
