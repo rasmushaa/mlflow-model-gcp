@@ -7,8 +7,33 @@ on:
       - dev
 
 jobs:
-  deploy:
+  build_wheel:
     runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v7
+      with:
+          version: "0.9.9"
+
+    - name: Build polymodel package wheel
+      run: |
+        uv build polymodel/ --out-dir ./polymodel_dist/
+
+    - name: Upload polymodel package wheel as artifact
+      run: |
+        uv venv
+        uv sync --dev # Install dev dependencies rom repo pyproject.toml
+        uv run twine upload \
+          --repository-url https://${{ secrets.GCP_LOCATION }}-python.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/python-packages/ \
+          ./polymodel_dist/* --verbose
+
+  deploy_job:
+    runs-on: ubuntu-latest
+    needs: build_wheel
 
     steps:
     - name: Init Environment Variables
@@ -38,25 +63,6 @@ jobs:
       uses: google-github-actions/setup-gcloud@v1
       with:
         project_id: ${{ secrets.GCP_PROJECT_ID }}
-
-    - name: Install uv
-      uses: astral-sh/setup-uv@v7
-      with:
-          version: "0.9.9"
-
-    - name: Build polymodel package wheel
-      run: |
-        uv build polymodel/ --out-dir ./polymodel_dist/
-
-    - name: Upload polymodel package wheel as artifact
-      run: |
-        uv venv
-        uv pip install twine
-        export TWINE_USERNAME="oauth2accesstoken"
-        export TWINE_PASSWORD="$(gcloud auth print-access-token)"
-        uv run twine upload \
-          --repository-url https://${{ secrets.GCP_LOCATION }}-python.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/python-packages/ \
-          ./polymodel_dist/* \
 
     - name: Configure Docker to use gcloud as a credential helper
       run: |

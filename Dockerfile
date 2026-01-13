@@ -13,8 +13,8 @@ COPY polymodel /app/polymodel
 COPY src /app/src
 COPY config.yaml /app/config.yaml
 
-# Use system Python (no venv)
-RUN uv pip install --system -r pyproject.toml
+# Use system Python (no venv) from lockfile
+RUN uv pip sync --system pyproject.toml
 
 # The commit SHA should be passed as a build argument to connect the mlflow run to code version
 ARG GIT_SHA

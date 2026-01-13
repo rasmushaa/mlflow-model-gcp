@@ -21,6 +21,9 @@ dependencies = [
 dev = [
     "pytest>=9.0.1",
     "pre-commit>=4.5.1",
+    "twine>=6.2.0",
+    "keyring>=25.7.0",
+    "keyrings-google-artifactregistry-auth>=1.1.2",
 ]
 
 [tool.uv.workspace]
