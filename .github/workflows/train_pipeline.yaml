@@ -50,13 +50,16 @@ jobs:
           echo "Version does not exist on GCP Artifact Registry. Proceeding with build and upload."
         fi
 
-    - name: Build and Upload polymodel package wheel
+    - name: Setup uv
       if: steps.polymodel_exists.outputs.exists == 'false'
       uses: astral-sh/setup-uv@v7
       with:
           version: "0.9.9"
+
+    - name: Build and Upload polymodel package wheel
+      if: steps.polymodel_exists.outputs.exists == 'false'
       run: |
-        echo "Installing uv..."
+        echo "Installing uv env..."
         uv venv
         uv sync --dev # Install dev dependencies from repo pyproject.toml
 
