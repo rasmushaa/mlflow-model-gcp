@@ -28,7 +28,15 @@ jobs:
     - name: Resolve current polymodel version
       id: polymodel_version
       run: |
-        VERSION=$(python -c 'from importlib.metadata import version; print(version("polymodel"))')
+        VERSION=$(python - <<'EOF'
+        import tomllib
+
+        with open("polymodel/pyproject.toml", "rb") as f:
+            data = tomllib.load(f)
+
+        print(data["project"]["version"])
+        EOF
+        )
         echo "version=$VERSION" >> "$GITHUB_OUTPUT"
         echo "Resolved current polymodel version: $VERSION"
 
