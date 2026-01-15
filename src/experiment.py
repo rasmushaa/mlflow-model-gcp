@@ -165,17 +165,16 @@ class ExperimentManager:
         """
         mlflow.set_tags(tags)
 
-    def log_model(self, pipeline, data_example: pd.DataFrame, wheel_path: str):
+    def log_model(self, pipeline, data_example: pd.DataFrame):
         """Log a MLflow model artifact to the current MLflow run.
 
         Parameters
         ----------
         pipeline:
-            The trained model to log
+            The trained model class to log
         data_example: pd.DataFrame
-            A small sample is extracted to use as input example mathinc the first layer features
-        wheel_dir: str
-            The directory containing the model package wheel file
+            A sample DataFrame of any size to create input example from.
+            Note: only top 5 rows are used, and only the features used by the pipeline.
         """
         # The registered model name matches the runtime env (e.g., BankingModel-dev)
         model_name = os.getenv("MLFLOW_MODEL_NAME")

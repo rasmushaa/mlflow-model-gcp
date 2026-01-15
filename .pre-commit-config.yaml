@@ -63,3 +63,13 @@ repos:
         pass_filenames: false
         always_run: true
         stages: [pre-commit]
+
+      # Custom hook to remove Jupyter notebook outputs before committing for security and cleanliness.
+      - id: remove-notebook-output
+        name: Remove Jupyter notebook outputs
+        entry: python3 scripts/remove_notebook_outputs.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+        files: \.ipynb$

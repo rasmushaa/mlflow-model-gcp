@@ -13,11 +13,11 @@ COPY polymodel /app/polymodel
 COPY src /app/src
 COPY config.yaml /app/config.yaml
 
-# Use system Python (no venv) from lockfile
-RUN uv pip sync --system pyproject.toml
+# Use uv workspace mode to install also workspace packages (polymodel), with frozen dependencies fom uv.lock to system Python env
+RUN uv venv --system && uv sync --frozen
 
 # The commit SHA should be passed as a build argument to connect the mlflow run to code version
 ARG GIT_SHA
 ENV GIT_COMMIT_SHA=${GIT_SHA}
 
-CMD ["python", "src/main.py"]
+CMD ["uv", "run", "src/main.py"]
