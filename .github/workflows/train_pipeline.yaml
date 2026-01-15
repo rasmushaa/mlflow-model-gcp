@@ -28,9 +28,7 @@ jobs:
     - name: Resolve current polymodel version
       id: polymodel_version
       run: |
-        VERSION=$(python - <<'EOF'
-        from importlib.metadata import version
-        print(version("polymodel")) EOF)
+        VERSION=$(python -c 'from importlib.metadata import version; print(version("polymodel"))')
         echo "version=$VERSION" >> "$GITHUB_OUTPUT"
         echo "Resolved current polymodel version: $VERSION"
 
