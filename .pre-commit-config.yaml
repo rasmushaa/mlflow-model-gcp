@@ -69,7 +69,11 @@ repos:
         name: Remove Jupyter notebook outputs
         entry: python3 scripts/remove_notebook_outputs.py
         language: system
-        pass_filenames: false
-        always_run: true
-        stages: [pre-commit]
         files: \.ipynb$
+
+      # Custom hook to force sync of uv lock file when pyproject.toml is changed manually.
+      - id: sync-uv-lock-file
+        name: Sync uv lock file
+        entry: python3 scripts/sync_uv_lock_file.py
+        language: system
+        files: ^pyproject\.toml$
