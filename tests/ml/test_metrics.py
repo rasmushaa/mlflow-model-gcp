@@ -1,9 +1,6 @@
 import numpy as np
 
-from src.utils.ml.metrics import (
-    classification_report_metrics,
-    prediction_report_metrics,
-)
+from src.ml.metrics import classification_report_metrics, prediction_report_metrics
 
 
 def test_classification_report_metrics_binary():
@@ -17,7 +14,7 @@ def test_classification_report_metrics_binary():
     y_pred = np.array([0, 1, 0, 1, 0, 1, 1, 0, 1, 0])
 
     # Call the function
-    metrics = classification_report_metrics(y_true, y_pred)
+    metrics, _ = classification_report_metrics(y_true, y_pred)
 
     print(metrics)
 
@@ -39,7 +36,7 @@ def test_classification_report_metrics_multiclass():
     y_pred = np.array([0, 1, 0, 1, 2, 1, 2, 2])
 
     # Call the function
-    metrics = classification_report_metrics(y_true, y_pred)
+    metrics, _ = classification_report_metrics(y_true, y_pred)
 
     print(metrics)
 
@@ -102,7 +99,7 @@ def test_prediction_report_metrics_multi_class():
     )
     classes = np.array([0, 1, 2])
 
-    metrics, figs = prediction_report_metrics(y_true, y_prob, classes)
+    metrics, _ = prediction_report_metrics(y_true, y_prob, classes)
     print(metrics)
 
     tolerance = 0.0001
@@ -134,7 +131,7 @@ def test_prediction_report_metrics_binary():
     y_prob = np.array([0.1, 0.9, 0.4, 0.8, 0.2, 0.6, 0.7, 0.3, 0.5, 0.2])
     classes = np.array([0, 1])
 
-    metrics, figs = prediction_report_metrics(y_true, y_prob, classes)
+    metrics, _ = prediction_report_metrics(y_true, y_prob, classes)
     print(metrics)
 
     tolerance = 0.0001

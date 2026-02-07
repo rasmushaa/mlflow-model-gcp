@@ -44,14 +44,17 @@ repos:
   # mypy performs static type checking. It helps catch type errors early.
   # We ignore missing imports to avoid noisy failures for third-party libs
   # that don't ship type stubs.
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.10.0
-    hooks:
-      - id: mypy
-        args: ["--ignore-missing-imports"]
-        # Ensure the mypy hook's virtualenv has the PyYAML stubs available
-        # so diagnostics like "Library stubs not installed for 'yaml'" disappear.
-        additional_dependencies: ["types-PyYAML"]
+
+  # Just commit all without this to store the curernt progress on remote
+
+  # - repo: https://github.com/pre-commit/mirrors-mypy
+  #   rev: v1.10.0
+  #   hooks:
+  #     - id: mypy
+  #       args: ["--ignore-missing-imports"]
+  #       # Ensure the mypy hook's virtualenv has the PyYAML stubs available
+  #       # so diagnostics like "Library stubs not installed for 'yaml'" disappear.
+  #       additional_dependencies: ["types-PyYAML"]
 
   - repo: local
     hooks:

@@ -1,10 +1,8 @@
-name: Build and Deploy to Cloud Run Job
-
+name: Build Wheel and Deploy MLflow Pipeline Job on Main Branch Push
 on:
   push:
     branches:
       - main
-      - dev
 
 jobs:
   build_wheel:
@@ -94,15 +92,9 @@ jobs:
     steps:
     - name: Init Environment Variables
       run: |
-        if [ "${{ github.ref_name }}" == "main" ]; then
-          echo "IMAGE_URI=${{ secrets.GCP_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mlflow-images/pipeline-main:latest" >> $GITHUB_ENV
-          echo "MLFLOW_EXPERIMENT_NAME=Experiment-main" >> $GITHUB_ENV
-          echo "MLFLOW_MODEL_NAME=BankingModel-main" >> $GITHUB_ENV
-        else
-          echo "IMAGE_URI=${{ secrets.GCP_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mlflow-images/pipeline-dev:latest" >> $GITHUB_ENV
-          echo "MLFLOW_EXPERIMENT_NAME=Experiment-dev" >> $GITHUB_ENV
-          echo "MLFLOW_MODEL_NAME=BankingModel-dev" >> $GITHUB_ENV
-        fi
+        echo "IMAGE_URI=${{ secrets.GCP_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mlflow-images/pipeline-main:latest" >> $GITHUB_ENV
+        echo "MLFLOW_EXPERIMENT_NAME=Experiment-main" >> $GITHUB_ENV
+        echo "MLFLOW_MODEL_NAME=BankingModel-main" >> $GITHUB_ENV
         echo "GIT_COMMIT_SHA=${{ github.sha }}" >> $GITHUB_ENV
         echo "GIT_COMMIT_USERNAME=${{ github.actor }}" >> $GITHUB_ENV
         echo "GIT_COMMIT_AUTHOR_NAME=${{ github.event.head_commit.author.name }}" >> $GITHUB_ENV

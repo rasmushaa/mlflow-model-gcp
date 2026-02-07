@@ -3,8 +3,8 @@ import logging
 from context import Context
 from experiment import ExperimentManager
 from loader import DataLoader
-from ml.metrics import evaluate_model, kfold_report_metrics
-from ml.processing import kfold_iterator
+from ml.evaluation import evaluate_model, kfold_report_metrics
+from ml.training import kfold_iterator
 from polymodel.factory import pipeline_factory
 from setup_logging import setup_logging
 

@@ -17,7 +17,11 @@ from sklearn.metrics import (
 )
 from sklearn.preprocessing import label_binarize
 
-from .plots import plot_classification_metrics, plot_confusion_matrix, plot_roc_auc
+from .evaluation.plots import (
+    plot_classification_metrics,
+    plot_confusion_matrix,
+    plot_roc_auc,
+)
 
 
 def evaluate_model(
