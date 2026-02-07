@@ -37,3 +37,18 @@ query:
   start_date:
   end_date:
   mock: false
+
+# Evaluation parameters
+metrics:
+  accuracy:
+    reducers: ["mean", "minmax"]
+  precision_macro:
+    reducers: ["mean", "minmax"]
+  recall_macro:
+    reducers: ["mean", "minmax"]
+  f1_score_macro:
+    reducers: ["mean", "minmax"]
+  roc_auc_macro:
+    reducers: ["mean", "minmax"]
+  roc_auc_micro:
+    reducers: ["mean", "minmax"]

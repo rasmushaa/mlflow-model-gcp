@@ -47,6 +47,11 @@ class Pipeline:
         return str
 
     @property
+    def classes(self) -> List[str]:
+        """For metrics-toolbox compatibility..."""
+        return self.__model.classes
+
+    @property
     def model(self) -> ModelInterface:
         """Get the model used in the pipeline.
 

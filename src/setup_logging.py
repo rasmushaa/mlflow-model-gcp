@@ -9,7 +9,7 @@ import logging
 import sys
 
 
-def setup_logging(level=logging.DEBUG, logfile="app.log"):
+def setup_logging(level=logging.DEBUG, logfile="app.log", suppress_external=False):
     formatter = logging.Formatter(
         fmt="%(asctime)s [%(levelname)s] %(filename)s:%(lineno)d "
         "%(funcName)s() [%(name)s] - %(message)s",
@@ -34,3 +34,18 @@ def setup_logging(level=logging.DEBUG, logfile="app.log"):
 
     root.addHandler(console_handler)
     root.addHandler(file_handler)
+
+    # Suppress external library logs if requested
+    if suppress_external:
+        # Set all third-party loggers to WARNING or higher
+        logging.getLogger("mlflow").setLevel(logging.WARNING)
+        logging.getLogger("google").setLevel(logging.WARNING)
+        logging.getLogger("urllib3").setLevel(logging.WARNING)
+        logging.getLogger("requests").setLevel(logging.WARNING)
+        logging.getLogger("pandas").setLevel(logging.WARNING)
+        logging.getLogger("sklearn").setLevel(logging.WARNING)
+        logging.getLogger("matplotlib").setLevel(logging.WARNING)
+        logging.getLogger("PIL").setLevel(logging.WARNING)
+        logging.getLogger("h5py").setLevel(logging.WARNING)
+        logging.getLogger("tensorflow").setLevel(logging.WARNING)
+        logging.getLogger("torch").setLevel(logging.WARNING)

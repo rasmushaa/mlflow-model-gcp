@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - dev
+      - 'feature/*'
 
 jobs:
   build_wheel:
@@ -103,6 +103,7 @@ jobs:
           echo "MLFLOW_EXPERIMENT_NAME=Experiment-dev" >> $GITHUB_ENV
           echo "MLFLOW_MODEL_NAME=BankingModel-dev" >> $GITHUB_ENV
         fi
+        echo "GIT_BRANCH=${{ github.ref_name }}" >> $GITHUB_ENV
         echo "GIT_COMMIT_SHA=${{ github.sha }}" >> $GITHUB_ENV
         echo "GIT_COMMIT_USERNAME=${{ github.actor }}" >> $GITHUB_ENV
         echo "GIT_COMMIT_AUTHOR_NAME=${{ github.event.head_commit.author.name }}" >> $GITHUB_ENV
@@ -144,6 +145,7 @@ jobs:
         GCP_BQ_DATASET: "${{ secrets.GCP_BQ_DATASET }}"
         GIT_COMMIT_USERNAME: "${{ env.GIT_COMMIT_USERNAME }}"
         GIT_COMMIT_AUTHOR_NAME: "${{ env.GIT_COMMIT_AUTHOR_NAME }}"
+        GIT_COMMIT_BRANCH: "${{ env.GIT_BRANCH }}"
         EOF
 
     - name: Deploy Cloud Run Job

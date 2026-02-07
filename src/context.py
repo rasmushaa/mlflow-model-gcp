@@ -1,6 +1,7 @@
 import logging
 
 import yaml
+from git import List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -8,12 +9,13 @@ logger = logging.getLogger(__name__)
 class Context(dict):
     """The main context for everything related to configuration and hyperparameters.
 
-    Attributes
-    ----------
-    config: dict
-        The model configuration loaded from config, and hyperparameters YAML files.
-    config_flat: dict
-        The flattened model configuration for easy logging with MLflow.
+    The context calss inherits from dict and is initialized by loading the configuration from a YAML file.
+    It acts like a dictionary, but also provides a method to flatten the configuration for mlflow logging.
+
+    Methods
+    -------
+    ravel()
+        Get the full configuration as a flattened dictionary to log to mlflow, etc.
     """
 
     def __init__(self):
@@ -22,26 +24,27 @@ class Context(dict):
         The config and hyperparameters format is validated during loading.
         Actual values are not validated here.
         """
-        # Initialize the parent dict class
         super().__init__()
-
-        # Safely open and load the main configuration file
         config = self.__open_config("config.yaml")
-
-        # Populate the dict with the config data
         self.update(config)
         logger.info(f"Loaded configuration: {self}")
 
-    def ravel(self):
-        """Get the full configuration as a flattened dictionary,
-        using dot notation for nested keys.
+    def ravel(self, exclude_keys: Optional[List[str]] = []) -> dict:
+        """Get the full configuration as a flattened dictionary
+
+        Parameters
+        ----------
+        exclude_keys: List[str], optional
+            List of top-level keys to exclude from flattening.
+            This is useful metrics or other nested config sections
+            that should not be flattened for mlflow logging.
 
         Returns
         -------
         config: dict
             The model configuration loaded from config.yaml
         """
-        return self.__flatten_dict(dict(self))
+        return self.__flatten_dict(dict(self), exclude_keys=exclude_keys)
 
     def __open_yaml(self, filepath: str) -> dict:
         """Open and load a YAML file.
@@ -104,19 +107,15 @@ class Context(dict):
                 "Context() 'transformer' value must be a list of transformer configs"
             )
 
-    def __flatten_dict(self, d: dict) -> dict:
+    def __flatten_dict(self, d: dict, exclude_keys: Optional[List[str]] = []) -> dict:
         """Flatten a nested dictionary using dot notation for keys.
-
-        Example
-        -------
-        >>> {'model': {'name': 'random_forest', 'hyperparams': {'max_depth': 10, 'n_estimators': 100}}, training: {'target_column': 'label'}}
-        becomes
-        >>> {'model.random_forest.max_depth': 10, 'model.random_forest.n_estimators': 100, 'training.target_column': 'label'}
 
         Parameters
         ----------
         d: dict
             The nested dictionary to flatten.
+        exclude_keys: List[str], optional
+            List of keys to exclude from flattening.
 
         Returns
         -------
@@ -126,6 +125,9 @@ class Context(dict):
 
         items = {}
         for k, v in d.items():
+
+            if k in exclude_keys:
+                continue
 
             if k == "model":
                 name = v.get("name", "unknown_model")
