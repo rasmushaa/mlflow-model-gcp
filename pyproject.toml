@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "google-cloud-storage>=3.6.0",
-    "metrics-toolbox>=0.1.0.dev1",
+    "metrics-toolbox>=0.1.0",
     "pandas-gbq>=0.30.0",
     "pipreqs>=0.5.0",
     "polymodel",
@@ -28,11 +28,5 @@ members = [
     "polymodel",
 ]
 
-[[tool.uv.index]]
-name = "test-pypi"
-url = "https://test.pypi.org/simple/"
-explicit = true
-
 [tool.uv.sources]
 polymodel = { workspace = true }
-metrics-toolbox = { index = "test-pypi" }

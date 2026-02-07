@@ -1628,16 +1628,16 @@ wheels = [
 
 [[package]]
 name = "metrics-toolbox"
-version = "0.1.0.dev2"
-source = { registry = "https://test.pypi.org/simple/" }
+version = "0.1.0"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "matplotlib" },
     { name = "numpy" },
     { name = "scikit-learn" },
 ]
-sdist = { url = "https://test-files.pythonhosted.org/packages/83/ac/b8b16566c5dc6cbd7a95650a0c9204122f6938da521cb7bc9d11629f262e/metrics_toolbox-0.1.0.dev2.tar.gz", hash = "sha256:0a616b606a3b2868f7899c37df5c5763fafe8056e672e232c433f710dc804619", size = 31096, upload-time = "2026-02-07T10:42:08.998Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/06/d7/7ef5bedb4abf1a9731d4f6eb3eb7cc681918a8cc7b2ff3be38d89dc1d651/metrics_toolbox-0.1.0.tar.gz", hash = "sha256:a9200d989da57883bbb1a3df019873a8139adede42b140a33359c9d6eceee413", size = 30885, upload-time = "2026-02-07T13:17:14.383Z" }
 wheels = [
-    { url = "https://test-files.pythonhosted.org/packages/0d/39/45833f5886c6b8f48f2589de351b9f50ec8097ed18f58bc7156ac92948b1/metrics_toolbox-0.1.0.dev2-py3-none-any.whl", hash = "sha256:17a2e7f545ef222638fcd5ae0476016c4946c5496fb6ac0d0d450cfdfd52582d", size = 40727, upload-time = "2026-02-07T10:42:07.492Z" },
+    { url = "https://files.pythonhosted.org/packages/9a/57/b29e5075cfddab814161b0e6b4c70613d4f565e3db6583cb2467d1a89432/metrics_toolbox-0.1.0-py3-none-any.whl", hash = "sha256:1c9a4979182fb03373b6b7ead4bdd98d8f69ccade9a211a07b07567f0179fb14", size = 40726, upload-time = "2026-02-07T13:17:13.387Z" },
 ]
 
 [[package]]
@@ -1704,7 +1704,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "google-cloud-storage", specifier = ">=3.6.0" },
-    { name = "metrics-toolbox", specifier = ">=0.1.0.dev1", index = "https://test.pypi.org/simple/" },
+    { name = "metrics-toolbox", specifier = ">=0.1.0" },
     { name = "pandas-gbq", specifier = ">=0.30.0" },
     { name = "pipreqs", specifier = ">=0.5.0" },
     { name = "polymodel", editable = "polymodel" },

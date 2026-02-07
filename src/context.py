@@ -1,7 +1,7 @@
 import logging
+from typing import List
 
 import yaml
-from git import List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 class Context(dict):
     """The main context for everything related to configuration and hyperparameters.
 
-    The context calss inherits from dict and is initialized by loading the configuration from a YAML file.
+    The context class inherits from dict and is initialized by loading the configuration from a YAML file.
     It acts like a dictionary, but also provides a method to flatten the configuration for mlflow logging.
 
     Methods
@@ -29,7 +29,7 @@ class Context(dict):
         self.update(config)
         logger.info(f"Loaded configuration: {self}")
 
-    def ravel(self, exclude_keys: Optional[List[str]] = []) -> dict:
+    def ravel(self, exclude_keys: List[str] = []) -> dict:
         """Get the full configuration as a flattened dictionary
 
         Parameters
@@ -107,7 +107,7 @@ class Context(dict):
                 "Context() 'transformer' value must be a list of transformer configs"
             )
 
-    def __flatten_dict(self, d: dict, exclude_keys: Optional[List[str]] = []) -> dict:
+    def __flatten_dict(self, d: dict, exclude_keys: List[str] = []) -> dict:
         """Flatten a nested dictionary using dot notation for keys.
 
         Parameters
