@@ -2,14 +2,13 @@ import logging
 import os
 import shutil
 from datetime import datetime
+from importlib.metadata import version
 from typing import Optional
 
 import joblib
 import mlflow
 import numpy as np
 import pandas as pd
-
-from package import get_installed_polymodel_version, get_next_polymodel_major_version
 
 logger = logging.getLogger(__name__)
 
@@ -204,11 +203,15 @@ class ExperimentManager:
         # Prepare input example
         input_example = self.__create_model_input_example(data_example, pipeline)
 
+        # Log model metadata
+        self.log_dict(pipeline.layers, "layers")
+        self.set_tags({"model.architecture": pipeline.architecture})
+        self.set_tags({"model.features": pipeline.features})
+
         # Log polymodel version constraints
-        current_version = get_installed_polymodel_version()
-        max_version = get_next_polymodel_major_version()
+        current_version = version("polymodel")
         logger.info(
-            f"Logging model with polymodel version constraint: >= {current_version}, < {max_version}"
+            f"Logging model with polymodel version constraint: ~= {current_version}"
         )
 
         # Log the model with artifacts (code-based model using wrapper.py)
@@ -218,7 +221,7 @@ class ExperimentManager:
             artifacts=artifact_paths,
             input_example=input_example,
             pip_requirements=[
-                f"polymodel>={current_version},<{max_version}",
+                f"polymodel~={current_version}",
             ],
         )
 
@@ -227,8 +230,8 @@ class ExperimentManager:
             f"models:/{logged_model.model_uri.split('/')[-1]}",
             model_name,
             tags={
-                "model.package.version": get_installed_polymodel_version(),
-                "git.commit.sha": os.getenv("GIT_COMMIT_SHA"),
+                "package.version": current_version,
+                "commit.sha": os.getenv("GIT_COMMIT_SHA", "unknown"),
                 "model.features": pipeline.features,
                 "model.architecture": pipeline.architecture,
             },
@@ -311,11 +314,11 @@ class ExperimentManager:
 
         mlflow.set_tags(
             {
-                "package_version": get_installed_polymodel_version(),
-                "commit_sha": os.getenv("GIT_COMMIT_SHA"),
-                "commit_user": os.getenv("GIT_COMMIT_USERNAME"),
-                "commit_author": os.getenv("GIT_COMMIT_AUTHOR_NAME"),
-                "commit_branch": os.getenv("GIT_COMMIT_BRANCH"),
+                "package.version": version("polymodel"),
+                "commit.sha": os.getenv("GIT_COMMIT_SHA", "unknown"),
+                "commit.user": os.getenv("GIT_COMMIT_USERNAME", "unknown"),
+                "commit.author": os.getenv("GIT_COMMIT_AUTHOR_NAME", "unknown"),
+                "commit.branch": os.getenv("GIT_COMMIT_BRANCH", "unknown"),
             }
         )
 

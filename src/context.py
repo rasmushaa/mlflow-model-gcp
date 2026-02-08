@@ -30,7 +30,8 @@ class Context(dict):
         logger.info(f"Loaded configuration: {self}")
 
     def ravel(self, exclude_keys: List[str] = []) -> dict:
-        """Get the full configuration as a flattened dictionary
+        """Get the full configuration as a flattened dictionary,
+        using dot notation for nested keys.
 
         Parameters
         ----------
@@ -46,27 +47,8 @@ class Context(dict):
         """
         return self.__flatten_dict(dict(self), exclude_keys=exclude_keys)
 
-    def __open_yaml(self, filepath: str) -> dict:
-        """Open and load a YAML file.
-
-        Parameters
-        ----------
-        filepath: str
-            The path to the YAML file.
-
-        Returns
-        -------
-        dict
-            The loaded YAML content as a dictionary.
-        """
-        try:
-            with open(filepath, "r") as file:
-                return yaml.safe_load(file)
-        except FileNotFoundError:
-            raise FileNotFoundError(f"YAML file not found: {filepath}")
-
     def __open_config(self, filepath: str) -> dict:
-        """Open and load the main configuration YAML file.
+        """Open and load the configuration YAML file.
 
         Parameters
         ----------
@@ -78,7 +60,11 @@ class Context(dict):
         dict
             The loaded configuration as a dictionary.
         """
-        config = self.__open_yaml(filepath)
+        try:
+            with open(filepath, "r") as file:
+                config = yaml.safe_load(file)
+        except FileNotFoundError:
+            raise FileNotFoundError(f"YAML file not found: {filepath}")
         self.__validate_config(config)
         return config
 
@@ -90,22 +76,12 @@ class Context(dict):
         ValueError
             If required configuration keys are missing or invalid.
         """
-        if not isinstance(config, dict):
-            raise ValueError(
-                f"Context() Configuration must be a dict. Got {config} instead"
-            )
-
-        required_keys = ["model", "transformer", "training", "query"]
+        required_keys = ["model", "transformer", "training", "query", "metrics"]
         for key in required_keys:
             if key not in config:
                 raise ValueError(
                     f"Context() Missing required configuration key: {key} in config.yaml"
                 )
-
-        if not isinstance(config["transformer"], list):
-            raise ValueError(
-                "Context() 'transformer' value must be a list of transformer configs"
-            )
 
     def __flatten_dict(self, d: dict, exclude_keys: List[str] = []) -> dict:
         """Flatten a nested dictionary using dot notation for keys.

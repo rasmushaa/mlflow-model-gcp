@@ -3,13 +3,15 @@ import logging
 from metrics_toolbox import EvaluatorBuilder
 
 from context import Context
+from debug import setup_logging
 from experiment import ExperimentManager
 from loader import DataLoader
-from ml.processing import kfold_iterator
 from polymodel.factory import pipeline_factory
-from setup_logging import setup_logging
+from training import kfold_iterator
 
-setup_logging(level=logging.INFO, suppress_external=True)
+setup_logging(level=logging.INFO)
+
+logger = logging.getLogger(__name__)
 
 
 def main():
@@ -26,13 +28,13 @@ def main():
 
         # Load and log data
         data = loader.load()
-        manager.log_input(data, "Raw")
+        manager.log_input(data, "Raw-data")
 
         # K-Fold Cross Validation
         for fold, X_train, X_test, y_train, y_test in kfold_iterator(
             data, **context["training"]
         ):
-            logging.info(f"Fold {fold}: Train shape: {X_train.shape}")
+            logger.info(f"Fold {fold}: Train shape: {X_train.shape}")
 
             # Build and Fit a new pipeline for each fold
             pipeline = pipeline_factory(context["model"], context["transformer"])
@@ -47,12 +49,6 @@ def main():
         pipeline = pipeline_factory(context["model"], context["transformer"])
         pipeline.fit(X_full, y_full)
         manager.log_model(pipeline, data_example=X_full)
-
-        # Log pipeline architecture and layers
-        manager.log_dict(pipeline.layers, "layers")
-        manager.set_tags({"model.architecture": pipeline.architecture})
-        manager.set_tags({"model.signature": pipeline.signature})
-        manager.set_tags({"model.features": pipeline.features})
 
         # Metrics has to be logged after model logging to avoid duplication issues due this Bug: https://github.com/ecmwf/anemoi-core/issues/190
         results = evaluator.get_results()

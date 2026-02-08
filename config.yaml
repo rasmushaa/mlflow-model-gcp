@@ -28,9 +28,11 @@ transformer:
 # Training parameters
 training:
   target_column: "category"
+  features:
+    - "receiver"
+    - "amount"
   n_splits: 5
   shuffle: false
-  random_state:
 
 # Data parameters
 query:
