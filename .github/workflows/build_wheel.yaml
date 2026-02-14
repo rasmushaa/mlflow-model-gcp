@@ -1,0 +1,111 @@
+# =============================================================================
+# Build and Upload Python Wheel Package to GCP Artifact Registry
+# =============================================================================
+#
+# PURPOSE:
+# This pipeline automatically builds and uploads the polymodel Python wheel
+# package to GCP Artifact Registry after a pull request is merged to main.
+#
+# TRIGGER:
+# Runs only when a PR is successfully merged to the main branch (not on closed
+# without merging). This ensures only reviewed and approved code versions are
+# published.
+#
+# LOGIC FLOW:
+# 1. Extract version from polymodel/pyproject.toml
+# 2. Check if this version already exists in GCP Artifact Registry
+# 3. If version exists: Skip build and upload (prevents duplicate uploads)
+# 4. If version is new: Build wheel with uv and upload via twine
+#
+# WHY SEPARATED:
+# - Wheel publishing should only happen on main branch merges
+# - Training/deployment pipeline can run on feature branches without publishing
+# - Prevents accidental wheel overwrites during development
+# - Ensures version control and release management discipline
+#
+# =============================================================================
+
+name: Build and Upload Wheel to GCP
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+
+jobs:
+  build_wheel:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: 'read'
+      id-token: 'write' # This is crucial for Workload Identity Federation
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Authenticate with Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        project_id : ${{ secrets.GCP_PROJECT_ID }}
+        workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_POOL }}
+        service_account: ${{ secrets.GCP_DEPLOY_SA }}
+
+    - name: Resolve current polymodel version
+      id: polymodel_version
+      run: |
+        VERSION=$(python - <<'EOF'
+        import tomllib
+
+        with open("polymodel/pyproject.toml", "rb") as f:
+            data = tomllib.load(f)
+
+        print(data["project"]["version"])
+        EOF
+        )
+        echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+        echo "Resolved current polymodel version: $VERSION"
+
+    - name: Check if current polymodel version exists in Artifact Registry
+      id: polymodel_exists
+      run: |
+        if gcloud artifacts versions list \
+          --package=polymodel \
+          --repository=python-packages \
+          --location=${{ secrets.GCP_LOCATION }} \
+          --project=${{ secrets.GCP_PROJECT_ID }} \
+          --format="value(name)" | grep -q "${{ steps.polymodel_version.outputs.version }}"; then
+          echo "exists=true" >> "$GITHUB_OUTPUT"
+          echo "Version already exists on GCP Artifact Registry. Skipping build and upload."
+        else
+          echo "exists=false" >> "$GITHUB_OUTPUT"
+          echo "Version does not exist on GCP Artifact Registry. Proceeding with build and upload."
+        fi
+
+    - name: Setup uv
+      if: steps.polymodel_exists.outputs.exists == 'false'
+      uses: astral-sh/setup-uv@v7
+      with:
+          version: "0.9.9"
+
+    - name: Build and Upload polymodel package wheel
+      if: steps.polymodel_exists.outputs.exists == 'false'
+      run: |
+        echo "Installing uv env..."
+        uv venv
+        uv sync --dev # Install dev dependencies from repo pyproject.toml
+
+        echo "Building polymodel ${{ steps.polymodel_version.outputs.version }} with uv..."
+        uv build polymodel/ --out-dir ./polymodel_dist/
+
+        echo "Uploading polymodel ${{ steps.polymodel_version.outputs.version }} to GCP Artifact Registry..."
+        uv run twine upload \
+          --repository-url https://${{ secrets.GCP_LOCATION }}-python.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/python-packages/ \
+          ./polymodel_dist/* --verbose
+
+    - name: Skip upload (version already exists)
+      if: steps.polymodel_exists.outputs.exists == 'true'
+      run: |
+        echo "Skipping upload: polymodel version ${{ steps.polymodel_version.outputs.version }} already exists in Artifact Registry."

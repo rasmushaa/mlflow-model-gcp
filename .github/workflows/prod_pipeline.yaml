@@ -1,23 +1,37 @@
 # =============================================================================
-# Development Training Pipeline - Feature & Model Branches
+# Production Training Pipeline - Main Branch
 # =============================================================================
 #
 # PURPOSE:
-# Allows rapid iteration and testing of ML training pipeline on development
-# branches before merging to production.
+# Deploys and executes production ML training pipeline only after code review
+# and merge to main branch.
 #
 # TRIGGER:
-# Runs on pushes to feature/* and model/* branches
+# Runs after the "Build and Upload Wheel to GCP" workflow completes successfully.
+# Only executes when the PR that was merged had a branch name starting with "model/".
+# This ensures the polymodel wheel is built and uploaded before training runs.
+#
+# DEPENDENCIES:
+# - Requires "Build and Upload Wheel to GCP" workflow to complete successfully
+# - Only runs for model/* branch merges to main
 #
 # LOGIC FLOW:
-# 1. Build Docker image for the current branch
-# 2. Deploy to Cloud Run Job with branch-specific configuration
-# 3. Execute training job with branch-specific MLflow experiment
+# 1. Wait for wheel build workflow to complete successfully
+# 2. Check if merged branch name starts with "model/"
+# 3. Build production Docker image tagged with commit SHA
+# 4. Deploy to Cloud Run Job with production configuration
+# 5. Execute training job immediately with production MLflow experiment
 #
 # NAMING CONVENTION:
-# - Image: banking-pipeline-dev:latest (shared for all dev branches)
-# - Experiment: Banking-{branch-name}
-# - Model: BankingModel-{branch-name}
+# - Image: banking-pipeline-main:latest
+# - Experiment: Banking-main
+# - Model: BankingModel-main
+#
+# WHY SEPARATED:
+# - Production runs should only happen after code review
+# - Prevents accidental production deployments from feature branches
+# - Ensures production quality gates are met
+# - Clear separation between dev and prod environments
 #
 # META:
 # Build Docker image with embedded git commit SHA for traceability.
@@ -29,37 +43,37 @@
 # This enables tracking which developer, branch, and commit produced each model.
 # =============================================================================
 
-name: Development Training Pipeline
+name: Production Training Pipeline
 
 on:
-  push:
+  workflow_run:
+    workflows: ["Build and Upload Wheel to GCP"]
+    types:
+      - completed
     branches:
-      - 'feature/*'
-      - 'model/*'
+      - main
 
 jobs:
-  deploy_job:
+  deploy_prod_job:
+    if: |
+      github.event.workflow_run.conclusion == 'success' &&
+      startsWith(github.event.workflow_run.head_branch, 'model/')
     runs-on: ubuntu-latest
 
     permissions:
       contents: 'read'
-      id-token: 'write' # This is crucial for Workload Identity Federation
+      id-token: 'write'
 
     steps:
     - name: Init Environment Variables
       run: |
-        # Use branch name for experiment and model naming
-        BRANCH_NAME="${{ github.ref_name }}"
-        # Sanitize branch name for use in resource names (replace / with -)
-        SANITIZED_BRANCH=$(echo "$BRANCH_NAME" | sed 's/\//-/g')
-
-        echo "IMAGE_URI=${{ secrets.GCP_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mlflow-images/banking-pipeline-dev:latest" >> $GITHUB_ENV
-        echo "MLFLOW_EXPERIMENT_NAME=Banking-${SANITIZED_BRANCH}" >> $GITHUB_ENV
-        echo "MLFLOW_MODEL_NAME=BankingModel-${SANITIZED_BRANCH}" >> $GITHUB_ENV
-        echo "GIT_BRANCH=${{ github.ref_name }}" >> $GITHUB_ENV
-        echo "GIT_COMMIT_SHA=${{ github.sha }}" >> $GITHUB_ENV
-        echo "GIT_COMMIT_USERNAME=${{ github.actor }}" >> $GITHUB_ENV
-        echo "GIT_COMMIT_AUTHOR_NAME=${{ github.event.head_commit.author.name }}" >> $GITHUB_ENV
+        echo "IMAGE_URI=${{ secrets.GCP_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mlflow-images/banking-pipeline-main:latest" >> $GITHUB_ENV
+        echo "MLFLOW_EXPERIMENT_NAME=Banking-main" >> $GITHUB_ENV
+        echo "MLFLOW_MODEL_NAME=BankingModel-main" >> $GITHUB_ENV
+        echo "GIT_BRANCH=${{ github.event.workflow_run.head_branch }}" >> $GITHUB_ENV
+        echo "GIT_COMMIT_SHA=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_ENV
+        echo "GIT_COMMIT_USERNAME=${{ github.event.workflow_run.actor.login }}" >> $GITHUB_ENV
+        echo "GIT_COMMIT_AUTHOR_NAME=${{ github.event.workflow_run.head_commit.author.name }}" >> $GITHUB_ENV
 
     - name: Checkout code
       uses: actions/checkout@v3
@@ -101,9 +115,9 @@ jobs:
         GIT_COMMIT_BRANCH: "${{ env.GIT_BRANCH }}"
         EOF
 
-    - name: Deploy Cloud Run Job
+    - name: Deploy and Execute Cloud Run Job
       run: |
-        gcloud run jobs deploy banking-pipeline-dev \
+        gcloud run jobs deploy banking-pipeline-prod \
           --image "${{ env.IMAGE_URI }}" \
           --region ${{ secrets.GCP_LOCATION }} \
           --service-account ${{ secrets.GCP_MLFLOW_SA_NAME }} \
@@ -111,3 +125,13 @@ jobs:
           --cpu 1 \
           --memory 800Mi \
           --execute-now
+
+    - name: Summary
+      run: |
+        echo "================================================"
+        echo "✅ Production Training Pipeline Deployed"
+        echo "Branch: ${{ env.GIT_BRANCH }}"
+        echo "Commit: ${{ env.GIT_COMMIT_SHA }}"
+        echo "Experiment: ${{ env.MLFLOW_EXPERIMENT_NAME }}"
+        echo "Model: ${{ env.MLFLOW_MODEL_NAME }}"
+        echo "================================================"
