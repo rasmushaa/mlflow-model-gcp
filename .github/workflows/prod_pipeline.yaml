@@ -54,7 +54,7 @@ on:
       - main
 
 jobs:
-  deploy_prod_job:
+  training_pipeline_prod:
     if: |
       github.event.workflow_run.conclusion == 'success' &&
       startsWith(github.event.workflow_run.head_branch, 'model/')

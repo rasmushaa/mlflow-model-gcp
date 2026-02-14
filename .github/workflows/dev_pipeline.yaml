@@ -38,7 +38,7 @@ on:
       - 'model/*'
 
 jobs:
-  deploy_job:
+  training_pipeline_dev:
     runs-on: ubuntu-latest
 
     permissions:
