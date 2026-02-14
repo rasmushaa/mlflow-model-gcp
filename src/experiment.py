@@ -2,14 +2,13 @@ import logging
 import os
 import shutil
 from datetime import datetime
+from importlib.metadata import version
 from typing import Optional
 
 import joblib
 import mlflow
 import numpy as np
 import pandas as pd
-
-from package import get_installed_polymodel_version, get_next_polymodel_major_version
 
 logger = logging.getLogger(__name__)
 
@@ -102,6 +101,24 @@ class ExperimentManager:
         for i, (k, v) in enumerate(metrics.items()):
             mlflow.log_metric(k, round(v, decimals), step=step)
 
+    def log_metric(
+        self, key: str, value: float, step: Optional[int] = None, decimals: int = 3
+    ):
+        """Log a single metric to the current MLflow run.
+
+        Parameters
+        ----------
+        key: str
+            The name of the metric to log
+        value: float
+            The value of the metric to log
+        step: int, optional
+            The mlflow step at which to log the metric
+        decimals: int, optional
+            The number of decimal places to round the metric value
+        """
+        mlflow.log_metric(key, round(value, decimals), step=step)
+
     def log_input(self, df, name: str):
         """Log an array-like input data artifact to the current MLflow run.
 
@@ -130,7 +147,7 @@ class ExperimentManager:
         name: str
             The name of the logged text artifact
         """
-        mlflow.log_text(text, f"text/{name}.txt")
+        mlflow.log_text(text, f"{name}.txt")
 
     def log_dict(self, data_dict: dict, name: str):
         """Log a dictionary artifact to the current MLflow run.
@@ -142,7 +159,7 @@ class ExperimentManager:
         name: str
             The name of the logged dictionary artifact
         """
-        mlflow.log_dict(data_dict, f"dict/{name}.json")
+        mlflow.log_dict(data_dict, f"{name}.json")
 
     def log_figures(self, figures_dict: dict):
         """Log a matplotlib figure artifact to the current MLflow run.
@@ -153,7 +170,7 @@ class ExperimentManager:
             A dictionary of figure name (str) to matplotlib.figure.Figure
         """
         for name, fig in figures_dict.items():
-            mlflow.log_figure(fig, f"plot/{name}.png")
+            mlflow.log_figure(fig, f"{name}.png")
 
     def set_tags(self, tags: dict):
         """Set tags to the current MLflow run.
@@ -186,11 +203,15 @@ class ExperimentManager:
         # Prepare input example
         input_example = self.__create_model_input_example(data_example, pipeline)
 
+        # Log model metadata
+        self.log_dict(pipeline.layers, "layers")
+        self.set_tags({"model.architecture": pipeline.architecture})
+        self.set_tags({"model.features": pipeline.features})
+
         # Log polymodel version constraints
-        current_version = get_installed_polymodel_version()
-        max_version = get_next_polymodel_major_version()
+        current_version = version("polymodel")
         logger.info(
-            f"Logging model with polymodel version constraint: >= {current_version}, < {max_version}"
+            f"Logging model with polymodel version constraint: ~= {current_version}"
         )
 
         # Log the model with artifacts (code-based model using wrapper.py)
@@ -200,7 +221,7 @@ class ExperimentManager:
             artifacts=artifact_paths,
             input_example=input_example,
             pip_requirements=[
-                f"polymodel>={current_version},<{max_version}",
+                f"polymodel~={current_version}",
             ],
         )
 
@@ -209,8 +230,8 @@ class ExperimentManager:
             f"models:/{logged_model.model_uri.split('/')[-1]}",
             model_name,
             tags={
-                "model.package.version": get_installed_polymodel_version(),
-                "git.commit.sha": os.getenv("GIT_COMMIT_SHA"),
+                "package.version": current_version,
+                "commit.sha": os.getenv("GIT_COMMIT_SHA", "unknown"),
                 "model.features": pipeline.features,
                 "model.architecture": pipeline.architecture,
             },
@@ -290,17 +311,14 @@ class ExperimentManager:
         The default parameters include Git metadata for reproducibility,
         and model package version.
         """
-        version = get_installed_polymodel_version()
-        git_sha = os.getenv("GIT_COMMIT_SHA")
-        git_username = os.getenv("GIT_COMMIT_USERNAME")
-        git_author_name = os.getenv("GIT_COMMIT_AUTHOR_NAME")
 
         mlflow.set_tags(
             {
-                "model.package.version": version,
-                "git.commit.sha": git_sha,
-                "git.commit.user": git_username,
-                "git.commit.author": git_author_name,
+                "package.version": version("polymodel"),
+                "commit.sha": os.getenv("GIT_COMMIT_SHA", "unknown"),
+                "commit.user": os.getenv("GIT_COMMIT_USERNAME", "unknown"),
+                "commit.author": os.getenv("GIT_COMMIT_AUTHOR_NAME", "unknown"),
+                "commit.branch": os.getenv("GIT_COMMIT_BRANCH", "unknown"),
             }
         )
 

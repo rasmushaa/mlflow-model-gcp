@@ -5,8 +5,8 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "gitpython>=3.1.45",
     "google-cloud-storage>=3.6.0",
+    "metrics-toolbox>=0.1.0",
     "pandas-gbq>=0.30.0",
     "pipreqs>=0.5.0",
     "polymodel",

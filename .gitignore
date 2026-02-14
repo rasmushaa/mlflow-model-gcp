@@ -67,3 +67,6 @@ desktop.ini
 # Project specific
 artifacts/
 *.log
+logs/
+mlruns/
+*.db

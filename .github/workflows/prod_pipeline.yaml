@@ -1,0 +1,137 @@
+# =============================================================================
+# Production Training Pipeline - Main Branch
+# =============================================================================
+#
+# PURPOSE:
+# Deploys and executes production ML training pipeline only after code review
+# and merge to main branch.
+#
+# TRIGGER:
+# Runs after the "Build and Upload Wheel to GCP" workflow completes successfully.
+# Only executes when the PR that was merged had a branch name starting with "model/".
+# This ensures the polymodel wheel is built and uploaded before training runs.
+#
+# DEPENDENCIES:
+# - Requires "Build and Upload Wheel to GCP" workflow to complete successfully
+# - Only runs for model/* branch merges to main
+#
+# LOGIC FLOW:
+# 1. Wait for wheel build workflow to complete successfully
+# 2. Check if merged branch name starts with "model/"
+# 3. Build production Docker image tagged with commit SHA
+# 4. Deploy to Cloud Run Job with production configuration
+# 5. Execute training job immediately with production MLflow experiment
+#
+# NAMING CONVENTION:
+# - Image: banking-pipeline-main:latest
+# - Experiment: Banking-main
+# - Model: BankingModel-main
+#
+# WHY SEPARATED:
+# - Production runs should only happen after code review
+# - Prevents accidental production deployments from feature branches
+# - Ensures production quality gates are met
+# - Clear separation between dev and prod environments
+#
+# META:
+# Build Docker image with embedded git commit SHA for traceability.
+# The GIT_SHA build arg ensures the exact code version is baked into the image,
+# allowing us to trace back which commit produced a particular model or result.
+# Create environment variables file for Cloud Run Job.
+# Git-related variables (GIT_COMMIT_USERNAME, GIT_COMMIT_AUTHOR_NAME, GIT_COMMIT_BRANCH)
+# are passed to the training script and logged as MLflow metadata/tags.
+# This enables tracking which developer, branch, and commit produced each model.
+# =============================================================================
+
+name: Production Training Pipeline
+
+on:
+  workflow_run:
+    workflows: ["Build and Upload Wheel to GCP"]
+    types:
+      - completed
+    branches:
+      - main
+
+jobs:
+  training_pipeline_prod:
+    if: |
+      github.event.workflow_run.conclusion == 'success' &&
+      startsWith(github.event.workflow_run.head_branch, 'model/')
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+    - name: Init Environment Variables
+      run: |
+        echo "IMAGE_URI=${{ secrets.GCP_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mlflow-images/banking-pipeline-main:latest" >> $GITHUB_ENV
+        echo "MLFLOW_EXPERIMENT_NAME=Banking-main" >> $GITHUB_ENV
+        echo "MLFLOW_MODEL_NAME=BankingModel-main" >> $GITHUB_ENV
+        echo "GIT_BRANCH=${{ github.event.workflow_run.head_branch }}" >> $GITHUB_ENV
+        echo "GIT_COMMIT_SHA=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_ENV
+        echo "GIT_COMMIT_USERNAME=${{ github.event.workflow_run.actor.login }}" >> $GITHUB_ENV
+        echo "GIT_COMMIT_AUTHOR_NAME=${{ github.event.workflow_run.head_commit.author.name }}" >> $GITHUB_ENV
+
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Authenticate with Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        project_id : ${{ secrets.GCP_PROJECT_ID }}
+        workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_POOL }}
+        service_account: ${{ secrets.GCP_DEPLOY_SA }}
+
+    - name: Set up Google Cloud SDK
+      uses: google-github-actions/setup-gcloud@v1
+      with:
+        project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+    - name: Configure Docker to use gcloud as a credential helper
+      run: |
+        gcloud auth configure-docker ${{ secrets.GCP_LOCATION }}-docker.pkg.dev
+
+    - name: Build and Push Docker image
+      run: |
+        docker build --build-arg GIT_SHA="${{ env.GIT_COMMIT_SHA }}" -t "${{ env.IMAGE_URI }}" .
+        docker push "${{ env.IMAGE_URI }}"
+
+    - name: Create env-vars.yaml
+      run: |
+        cat <<EOF > env-vars.yaml
+        MLFLOW_TRACKING_URI: "${{ secrets.MLFLOW_TRACKING_URI }}"
+        MLFLOW_TRACKING_USERNAME: "${{ secrets.MLFLOW_TRACKING_USERNAME }}"
+        MLFLOW_TRACKING_PASSWORD: "${{ secrets.MLFLOW_TRACKING_PASSWORD }}"
+        MLFLOW_EXPERIMENT_NAME: "${{ env.MLFLOW_EXPERIMENT_NAME }}"
+        MLFLOW_MODEL_NAME: "${{ env.MLFLOW_MODEL_NAME }}"
+        GCP_PROJECT_ID: "${{ secrets.GCP_PROJECT_ID }}"
+        GCP_LOCATION: "${{ secrets.GCP_LOCATION }}"
+        GCP_BQ_DATASET: "${{ secrets.GCP_BQ_DATASET }}"
+        GIT_COMMIT_USERNAME: "${{ env.GIT_COMMIT_USERNAME }}"
+        GIT_COMMIT_AUTHOR_NAME: "${{ env.GIT_COMMIT_AUTHOR_NAME }}"
+        GIT_COMMIT_BRANCH: "${{ env.GIT_BRANCH }}"
+        EOF
+
+    - name: Deploy and Execute Cloud Run Job
+      run: |
+        gcloud run jobs deploy banking-pipeline-prod \
+          --image "${{ env.IMAGE_URI }}" \
+          --region ${{ secrets.GCP_LOCATION }} \
+          --service-account ${{ secrets.GCP_MLFLOW_SA_NAME }} \
+          --env-vars-file env-vars.yaml \
+          --cpu 1 \
+          --memory 800Mi \
+          --execute-now
+
+    - name: Summary
+      run: |
+        echo "================================================"
+        echo "✅ Production Training Pipeline Deployed"
+        echo "Branch: ${{ env.GIT_BRANCH }}"
+        echo "Commit: ${{ env.GIT_COMMIT_SHA }}"
+        echo "Experiment: ${{ env.MLFLOW_EXPERIMENT_NAME }}"
+        echo "Model: ${{ env.MLFLOW_MODEL_NAME }}"
+        echo "================================================"

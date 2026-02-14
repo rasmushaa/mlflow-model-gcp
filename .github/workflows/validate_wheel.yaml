@@ -1,0 +1,101 @@
+# =============================================================================
+# Validate Python Wheel Build - PR Check
+# =============================================================================
+#
+# PURPOSE:
+# This pipeline validates that the polymodel wheel can be built successfully
+# before allowing a PR to be merged. Acts as a quality gate.
+#
+# TRIGGER:
+# Runs on every pull request to main (opened, synchronized, reopened)
+#
+# LOGIC FLOW:
+# 1. Extract version from polymodel/pyproject.toml
+# 2. Verify version follows semantic versioning
+# 3. Build the wheel package (without uploading)
+# 4. Validate the build produces a valid .whl file
+#
+# USAGE:
+# Set this workflow as a required status check in GitHub repository settings:
+# Settings → Branches → Branch protection rules → Require status checks
+# Then select "validate_wheel" from the list of checks
+#
+# WHY THIS IS NEEDED:
+# - Catches build errors before merge
+# - Ensures version is properly formatted
+# - Validates pyproject.toml configuration
+# - Prevents broken builds from reaching main branch
+#
+# =============================================================================
+
+name: Validate Wheel Build
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  validate_wheel:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Resolve current polymodel version
+      id: polymodel_version
+      run: |
+        VERSION=$(python - <<'EOF'
+        import tomllib
+        import re
+
+        with open("polymodel/pyproject.toml", "rb") as f:
+            data = tomllib.load(f)
+
+        version = data["project"]["version"]
+
+        # Validate semantic versioning format (e.g., 1.0.0, 1.0.0-beta, etc.)
+        if not re.match(r'^\d+\.\d+\.\d+', version):
+            print(f"ERROR: Invalid version format: {version}")
+            exit(1)
+
+        print(version)
+        EOF
+        )
+        echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+        echo "✅ Valid version format: $VERSION"
+
+    - name: Setup uv
+      uses: astral-sh/setup-uv@v7
+      with:
+          version: "0.9.9"
+
+    - name: Build polymodel package wheel
+      run: |
+        echo "Installing uv env..."
+        uv venv
+        uv sync --dev # Install dev dependencies from repo pyproject.toml
+
+        echo "Building polymodel ${{ steps.polymodel_version.outputs.version }}..."
+        uv build polymodel/ --out-dir ./polymodel_dist/
+
+        echo "✅ Build successful!"
+
+    - name: Validate wheel file exists
+      run: |
+        if ls ./polymodel_dist/*.whl 1> /dev/null 2>&1; then
+          echo "✅ Wheel file created successfully:"
+          ls -lh ./polymodel_dist/*.whl
+        else
+          echo "❌ ERROR: No wheel file found!"
+          exit 1
+        fi
+
+    - name: Summary
+      run: |
+        echo "================================================"
+        echo "✅ Wheel Build Validation PASSED"
+        echo "Version: ${{ steps.polymodel_version.outputs.version }}"
+        echo "Package can be safely merged and published"
+        echo "================================================"
