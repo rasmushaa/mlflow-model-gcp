@@ -35,14 +35,16 @@ def update_readme(version: str) -> bool:
     content = readme_path.read_text()
 
     # Pattern to match the polymodel version badge
-    pattern = r"\[!\[Polymodel Version\]\(https://img\.shields\.io/badge/polymodel-v?[^\)]+\)\]\(https://github\.com/[^/]+/[^/]+\)"
-    new_badge = f"[![Polymodel Version](https://img.shields.io/badge/polymodel-v{version}-green.svg)](https://github.com/rasmus/mlflow-model-gcp)"
+    pattern = (
+        r"!\[Polymodel Version\]\(https://img\.shields\.io/badge/polymodel-v?[^\)]+\)"
+    )
+    new_badge = f"![Polymodel Version](https://img.shields.io/badge/polymodel-v{version}-green.svg)"
 
-    # Try to replace existing badge
-    new_content = re.sub(pattern, new_badge, content)
+    # Try to replace existing badge (only first occurrence)
+    new_content, count = re.subn(pattern, new_badge, content, count=1)
 
     # If no badge exists, add it after the title (first line)
-    if new_content == content:
+    if count == 0:
         lines = content.split("\n")
         if len(lines) > 0 and lines[0].startswith("#"):
             # Find the line after title and description
@@ -65,6 +67,9 @@ def update_readme(version: str) -> bool:
             print("⚠ Could not find appropriate location to insert badge")
             return False
     else:
+        if new_content == content:
+            print("✓ Polymodel version badge already up to date")
+            return False
         print(f"✓ Updated polymodel version badge to: v{version}")
 
     readme_path.write_text(new_content)

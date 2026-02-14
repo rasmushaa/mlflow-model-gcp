@@ -1,7 +1,9 @@
 # High-Level ML Pipeline Training Framework
 
 
-[![Polymodel Version](https://img.shields.io/badge/polymodel-v1.1.5-green.svg)](https://github.com/rasmus/mlflow-model-gcp)
+![Python Version](https://img.shields.io/badge/python-3.11%2B-blue.svg)
+![Polymodel Version](https://img.shields.io/badge/polymodel-v1.1.5-green.svg)
+![MLflow Version](https://img.shields.io/badge/mlflow-v3.6.0-red.svg)
 
 A production-grade MLOps pipeline for training machine learning models on Google Cloud Platform, featuring automated CI/CD workflows, experiment tracking with MLflow, and comprehensive traceability.
 

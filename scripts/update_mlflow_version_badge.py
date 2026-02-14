@@ -56,16 +56,33 @@ def update_readme(version: str) -> bool:
     content = readme_path.read_text()
 
     # Pattern to match the MLflow version badge
-    pattern = (
-        r"\[!\[MLflow Version\]\(https://img\.shields\.io/badge/mlflow-v?[^\)]+\)\]"
+    pattern = r"!\[MLflow Version\]\(https://img\.shields\.io/badge/mlflow-v?[^\)]+\)"
+    new_badge = (
+        f"![MLflow Version](https://img.shields.io/badge/mlflow-v{version}-red.svg)"
     )
-    new_badge = f"[![MLflow Version](https://img.shields.io/badge/mlflow-v{version}-orange.svg)]"
 
-    new_content = re.sub(pattern, new_badge, content)
+    new_content, count = re.subn(pattern, new_badge, content, count=1)
 
-    if new_content == content:
-        print("✓ MLflow version badge already up to date")
-        return False
+    # If no badge exists, add it after the title
+    if count == 0:
+        lines = content.split("\n")
+        if len(lines) > 0 and lines[0].startswith("#"):
+            # Find first empty line after title or last badge
+            insert_index = 2  # Default after title and empty line
+            for i, line in enumerate(lines[1:], start=1):
+                if "![" in line:  # Found another badge
+                    insert_index = i + 1  # Insert after this badge
+            lines.insert(insert_index, new_badge)
+            new_content = "\n".join(lines)
+            print(f"✓ Added MLflow version badge: v{version}")
+        else:
+            print("⚠ Could not find appropriate location to insert badge")
+            return False
+    else:
+        print(f"✓ Updated MLflow version badge to: v{version}")
+        if new_content == content:
+            print("✓ MLflow version badge already up to date")
+            return False
 
     readme_path.write_text(new_content)
     print(f"✓ Updated MLflow version badge to: v{version}")

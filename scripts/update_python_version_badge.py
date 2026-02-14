@@ -48,14 +48,34 @@ def update_readme(version: str) -> bool:
     version_badge = format_version_badge(version)
 
     # Pattern to match the Python version badge
-    pattern = r"\[!\[Python Version\]\(https://img\.shields\.io/badge/python-[^\)]+\)\]"
-    new_badge = f"[![Python Version](https://img.shields.io/badge/python-{version_badge}-blue.svg)]"
+    pattern = r"!\[Python Version\]\(https://img\.shields\.io/badge/python-[^\)]+\)"
+    new_badge = f"![Python Version](https://img.shields.io/badge/python-{version_badge}-blue.svg)"
 
-    new_content = re.sub(pattern, new_badge, content)
+    new_content, count = re.subn(pattern, new_badge, content, count=1)
 
-    if new_content == content:
-        print("✓ Python version badge already up to date")
-        return False
+    # If no badge exists, add it after the title
+    if count == 0:
+        lines = content.split("\n")
+        if len(lines) > 0 and lines[0].startswith("#"):
+            # Find first empty line after title or first badge
+            insert_index = 2  # Default after title and empty line
+            for i, line in enumerate(lines[1:], start=1):
+                if "![" in line:  # Found another badge
+                    insert_index = i
+                    break
+                if line.strip() != "" and not line.startswith("#"):
+                    break
+            lines.insert(insert_index, new_badge)
+            new_content = "\n".join(lines)
+            print(f"✓ Added Python version badge: {version}+")
+        else:
+            print("⚠ Could not find appropriate location to insert badge")
+            return False
+    else:
+        print(f"✓ Updated Python version badge to: {version}+")
+        if new_content == content:
+            print("✓ Python version badge already up to date")
+            return False
 
     readme_path.write_text(new_content)
     print(f"✓ Updated Python version badge to: {version}+")
