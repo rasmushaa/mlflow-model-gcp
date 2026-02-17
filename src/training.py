@@ -7,7 +7,6 @@ from sklearn.model_selection import KFold
 def kfold_iterator(
     data: pd.DataFrame,
     target_column: str,
-    features: list[str],
     n_splits: int,
     shuffle: bool,
 ) -> Iterator[tuple[int, pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]]:
@@ -41,11 +40,6 @@ def kfold_iterator(
         raise ValueError(
             f"kfold_iterator() Target column '{target_column}' not found in data: {data.columns.tolist()}"
         )
-    missing_features = [f for f in features if f not in data.columns]
-    if missing_features:
-        raise ValueError(
-            f"kfold_iterator() Features not found in data: {missing_features}"
-        )
     if n_splits <= 1:
         raise ValueError("kfold_iterator() n_splits must be greater than 1")
     if data.shape[0] <= n_splits:
@@ -58,7 +52,7 @@ def kfold_iterator(
 
     kf = KFold(n_splits=n_splits, shuffle=shuffle, random_state=random_state)
 
-    X = data[features]
+    X = data.drop(columns=[target_column])
     y = data[target_column]
 
     for fold, (train_idx, val_idx) in enumerate(kf.split(X)):

@@ -6,10 +6,10 @@ from context import Context
 from debug import setup_logging
 from experiment import ExperimentManager
 from loader import DataLoader
-from polymodel.factory import pipeline_factory
+from polymodel.pipeline import Pipeline
 from training import kfold_iterator
 
-setup_logging(level=logging.INFO)
+setup_logging(level=logging.INFO, suppress_external=True)
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ def main():
             logger.info(f"Fold {fold}: Train shape: {X_train.shape}")
 
             # Build and Fit a new pipeline for each fold
-            pipeline = pipeline_factory(context["model"], context["transformer"])
+            pipeline = Pipeline.from_config(context["pipeline"])
             pipeline.fit(X_train, y_train)
 
             # Evaluate model
@@ -46,7 +46,7 @@ def main():
         # Final model training on full data for model registry
         X_full = data.drop(columns=[context["training"]["target_column"]])
         y_full = data[context["training"]["target_column"]]
-        pipeline = pipeline_factory(context["model"], context["transformer"])
+        pipeline = Pipeline.from_config(context["pipeline"])
         pipeline.fit(X_full, y_full)
         manager.log_model(pipeline, data_example=X_full)
 

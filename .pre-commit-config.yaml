@@ -88,20 +88,20 @@ repos:
       # Custom hook to update polymodel version badge in README.md
       - id: update-polymodel-version-badge
         name: Update polymodel version badge in README
-        entry: python3 scripts/update_polymodel_version_badge.py
+        entry: uv run scripts/update_polymodel_version_badge.py
         language: system
         pass_filenames: false
 
       # Custom hook to update Python version badge in README.md
       - id: update-python-version-badge
         name: Update Python version badge in README
-        entry: python3 scripts/update_python_version_badge.py
+        entry: uv run scripts/update_python_version_badge.py
         language: system
         pass_filenames: false
 
       # Custom hook to update MLflow version badge in README.md
       - id: update-mlflow-version-badge
         name: Update MLflow version badge in README
-        entry: python3 scripts/update_mlflow_version_badge.py
+        entry: uv run scripts/update_mlflow_version_badge.py
         language: system
         pass_filenames: false

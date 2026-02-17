@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "polymodel"
-version = "1.1.5"
+version = "2.0.0"
 description = "Standalone ML model package to build a model pipeline dynamically from a config file."
 requires-python = ">=3.11"
 dependencies = [

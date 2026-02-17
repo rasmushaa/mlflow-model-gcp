@@ -1,66 +1,120 @@
-"""
-A module defining a machine learning pipeline that integrates data transformers and a model.
-This pipeline allows for sequential data preprocessing followed by model training and prediction.
-A interfaces for transformers and models are defined using Protocols to ensure compatibility.
-"""
-
 import logging
-from typing import List
+from typing import Any, cast
 
-import pandas as pd
-
-from .model.interface import ModelInterface
-from .transformer.interface import TransformerInterface
+from .components.base_components import BaseComponent, BaseModel
+from .components.registry import get_component
 
 logger = logging.getLogger(__name__)
 
 
 class Pipeline:
-    def __init__(
-        self, transformers: List[TransformerInterface], model: ModelInterface
-    ) -> None:
-        """Initializes the Pipeline with a list of transformers and a model.
+    def __init__(self, components: list[BaseComponent]) -> None:
+        """Init the pipeline with a list of components
+
+        The last component must be a model (i.e., inherit from BaseModel),
+        and the rest can be any transformers or models.
 
         Parameters
         ----------
-        transformers : List[TransformerInterface]
-            A sequence of transformer instances to preprocess the data in sequence.
-        model : ModelInterface
-            The machine learning model to be trained and used for predictions.
+        components : list[BaseComponent]
+            A list of BaseComponent instances that make up the pipeline.
+
+        Raises
+        ------
+        ValueError
+            If the components list is empty or if the last component does not inherit from BaseModel.
         """
-        self.__transformers = transformers
-        self.__model = model
-        self.__signature: List[str] = []
+        if not components:
+            raise ValueError("Pipeline must contain at least one component.")
+        if not isinstance(components[-1], BaseModel):
+            raise ValueError(
+                "Pipeline validation failed: last component must inherit from BaseModel."
+            )
+        self._components = components
+        logger.debug(self.__str__())
 
-    def __repr__(self) -> str:
-        """Return a string representation of the pipeline,
-        including its transformers and model.
-        """
-        str = "\nPipeline("
-        str += "\n  Transformers: ["
-        for transformer in self.__transformers:
-            str += f"\n    {transformer!r},"
-        str += "\n  ]"
-        str += "\n  Model:"
-        str += f"\n    {self.__model!r}"
-        str += "\n)"
-        return str
+    def __str__(self) -> str:
+        """String representation of the pipeline architecture."""
+        return f"Pipeline(architecture={self.architecture})"
 
-    @property
-    def classes(self) -> List[str]:
-        """For metrics-toolbox compatibility..."""
-        return self.__model.classes
+    @classmethod
+    def from_config(cls, config: dict[str, Any]) -> "Pipeline":
+        """Init a Pipeline instance from a configuration dictionary.
 
-    @property
-    def model(self) -> ModelInterface:
-        """Get the model used in the pipeline.
+        Example
+        -------
+        ```python
+        config = {
+            "scaler": {
+                "features": ["feature1", "feature2"],
+                "transform_mode": "overwrite",
+                "transform_suffix": "_scaled",
+                "hyperparams": {
+                    "method": "standard"
+                }
+            },
+            "model": {
+                "features": ["*"],
+                "transform_mode": "overwrite",
+                "transform_suffix": "",
+                "hyperparams": {} # Optional defaults to sklearn
+            }
+        }
+        pipeline = Pipeline.from_config(config)
+        ```
+
+        Parameters
+        ----------
+        config : dict[str, Any]
+            A configuration dictionary. The same pattern is used for each component.
 
         Returns
         -------
-        ModelInterface
-            The machine learning model instance.
+        Pipeline
+            An instance of the Pipeline class initialized according to the provided configuration.
         """
-        return self.__model
+
+        steps: list[tuple[str, dict[str, Any]]] = []
+        if isinstance(config, dict):
+            for name, step_cfg in config.items():
+                if not isinstance(step_cfg, dict):
+                    raise TypeError(f"Pipeline component `{name}` must be a mapping.")
+                steps.append((name, step_cfg))
+        else:
+            raise TypeError("`pipeline` must be a mapping.")
+
+        def build_component(name: str, step_cfg: dict[str, Any]) -> BaseComponent:
+            component_cls = get_component(name)
+            try:
+                hyperparams = (
+                    step_cfg.get("hyperparams", {})
+                    if step_cfg.get("hyperparams", {}) is not None
+                    else {}
+                )
+                return component_cls(
+                    features=step_cfg["features"],
+                    transform_mode=step_cfg["transform_mode"],
+                    transform_suffix=step_cfg["transform_suffix"],
+                    **hyperparams,
+                )
+            except KeyError as e:
+                raise KeyError(
+                    f"Missing required key `{e.args[0]}` in pipeline component `{name}` configuration."
+                )
+
+        components = [build_component(name, step_cfg) for name, step_cfg in steps]
+        return cls(components)
+
+    @property
+    def classes(self) -> list[str]:
+        """Get the classes from the last model component of the pipeline.
+
+        Returns
+        -------
+        list[str]
+            A list of class labels from the last model component.
+        """
+        return cast(BaseModel, self._components[-1]).classes
 
     @property
     def architecture(self) -> str:
@@ -69,51 +123,31 @@ class Pipeline:
         Returns
         -------
         str
-            A string describing the sequence of transformers and the model in the pipeline.
+            A string describing the sequence of components in the pipeline.
         """
-        arch = "->".join([t.__class__.__name__ for t in self.__transformers])
-        arch += "->" + self.__model.__class__.__name__
-        return arch
+        return "->".join([c.__class__.__name__ for c in self._components])
 
     @property
     def layers(self) -> dict:
-        """Get the signatures of the transformers and model in the pipeline.
+        """Get the signatures of the components in the pipeline.
 
         Returns
         -------
         dict
-            A dictionary containing the names and features of each transformer and the model.
+            A dictionary containing the names and features of each component in the pipeline.
         """
         signatures = {}
-        for i, transformer in enumerate(self.__transformers):
+        for i, component in enumerate(self._components):
             entry = {
-                "name": transformer.__class__.__name__,
-                "signature": transformer.signature,
-                "features": transformer.features,
+                "name": component.__class__.__name__,
+                "signature": component.signature,
+                "resolved_features": component.resolved_features,
             }
             signatures[i] = entry
-        signatures[len(self.__transformers)] = {
-            "name": self.__model.__class__.__name__,
-            "features": self.__model.features,
-        }
         return signatures
 
     @property
-    def signature(self) -> List[str]:
-        """Get the input signature of the pipeline.
-
-        The input signature is determined during the fitting process and represents
-        the features expected by the pipeline.
-
-        Returns
-        -------
-        List[str]
-            A list of feature names that form the input signature of the pipeline.
-        """
-        return self.__signature
-
-    @property
-    def features(self) -> List[str]:
+    def resolved_features(self) -> list[str]:
         """Get the list of actually required features by the pipeline.
 
         Depending on the architecture of the pipeline, some features might be
@@ -122,8 +156,8 @@ class Pipeline:
 
         Details
         -------
-        The features are determined by checking which features from the input
-        signature are used in at least one layer of the pipeline.
+        The features are determined by checking which first component signature values
+        are used in at least one layer of the pipeline.
         Note, some layers may create new features that are not part of the input signature.
 
         Returns
@@ -131,59 +165,66 @@ class Pipeline:
         List[str]
             A list of feature names that are required by the pipeline.
         """
-        all_features = []
-        for layer in self.layers.values():
-            all_features.extend(layer.get("features", []))
-        return [feature for feature in self.__signature if feature in all_features]
+        pipeline_signature = self._components[0].signature
+        required_features = set()
+        for component in self._components:
+            component_features = component.resolved_features
+            for feature in pipeline_signature:
+                if feature in component_features:
+                    required_features.add(feature)
+        return list(required_features)
 
-    def fit(self, X: pd.DataFrame, y: pd.Series) -> None:
-        """Fits the transformers and the model on the training data.
+    def fit(self, X, y=None):
+        """Fit the pipeline to the data.
 
         Parameters
         ----------
-        X : pd.DataFrame
+        X : array-like
             The input features for training.
-        y : pd.Series
-            The target labels for training.
-        """
-        self.__signature = X.columns.tolist()
-        logger.info("Start pipeline training")
-        for transformer in self.__transformers:
-            X = transformer.fit_transform(X, y)
-        self.__model.fit(X, y)
-        logger.info("End pipeline training")
-        logger.debug(f"Trained model pipeline layers:\n{self.layers}")
-
-    def predict(self, X: pd.DataFrame) -> pd.Series:
-        """Makes predictions using the trained model after transforming the input data.
-
-        Parameters
-        ----------
-        X : pd.DataFrame
-            The input features for making predictions.
+        y : array-like, optional
+            The target labels for training (required if the last component is a supervised model).
 
         Returns
         -------
-        pd.Series
-            The predicted labels.
+        self
+            The fitted pipeline instance.
         """
-        for transformer in self.__transformers:
-            X = transformer.transform(X)
-        return self.__model.predict(X)
+        logger.info("Fiting pipeline...")
+        for component in self._components:
+            X = component.fit(X, y).transform(X)
+        logger.debug("Resolved layers:\n%s", self.layers)
+        return self
 
-    def predict_proba(self, X: pd.DataFrame) -> pd.DataFrame:
-        """Makes probability predictions using the trained model after transforming the input data.
+    def predict(self, X):
+        """Make predictions using the fitted pipeline.
 
         Parameters
         ----------
-        X : pd.DataFrame
-            The input features for making probability predictions.
+        X : array-like
+            The input features for prediction.
 
         Returns
         -------
-        pd.DataFrame
-            The predicted probabilities for each class.
+        array-like
+            The predicted labels or values.
         """
-        for transformer in self.__transformers:
-            X = transformer.transform(X)
-        return self.__model.predict_proba(X)
+        for component in self._components[:-1]:
+            X = component.transform(X)
+        return self._components[-1].predict(X)
+
+    def predict_proba(self, X):
+        """Make probability predictions using the fitted pipeline.
+
+        Parameters
+        ----------
+        X : array-like
+            The input features for probability prediction.
+
+        Returns
+        -------
+        array-like
+            The predicted probabilities.
+        """
+        for component in self._components[:-1]:
+            X = component.transform(X)
+        return self._components[-1].predict_proba(X)

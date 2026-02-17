@@ -2,7 +2,7 @@
 
 
 ![Python Version](https://img.shields.io/badge/python-3.11%2B-blue.svg)
-![Polymodel Version](https://img.shields.io/badge/polymodel-v1.1.5-green.svg)
+![Polymodel Version](https://img.shields.io/badge/polymodel-v2.0.0-green.svg)
 ![MLflow Version](https://img.shields.io/badge/mlflow-v3.6.0-red.svg)
 
 A production-grade MLOps pipeline for training machine learning models on Google Cloud Platform, featuring automated CI/CD workflows, experiment tracking with MLflow, and comprehensive traceability.
@@ -154,19 +154,5 @@ git push origin model/improved-hyperparameters
 
 ### Configuration
 
-Model and training parameters are defined in [config.yaml](config.yaml):
-
-```yaml
-model:
-  name: "random_forest"
-  hyperparams:
-    max_depth: 25
-    n_estimators: 100
-
-transformer:
-  - name: "feature_selector"
-  - name: "text_cleaner"
-  - name: "kbest_text_vector"
-```
-
+Model and training parameters are defined in [config.yaml](config.yaml).
 Modify this file to experiment with different model architectures and preprocessing pipelines.
