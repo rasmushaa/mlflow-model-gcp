@@ -10,9 +10,10 @@
 # Runs on pushes to feature/* and model/* branches
 #
 # LOGIC FLOW:
-# 1. Build Docker image for the current branch
-# 2. Deploy to Cloud Run Job with branch-specific configuration
-# 3. Execute training job with branch-specific MLflow experiment
+# 1. Run unit tests to validate code quality
+# 2. Build Docker image for the current branch
+# 3. Deploy to Cloud Run Job with branch-specific configuration
+# 4. Execute training job with branch-specific MLflow experiment
 #
 # NAMING CONVENTION:
 # - Image: banking-pipeline-dev:latest (shared for all dev branches)
@@ -79,6 +80,20 @@ jobs:
     - name: Configure Docker to use gcloud as a credential helper
       run: |
         gcloud auth configure-docker ${{ secrets.GCP_LOCATION }}-docker.pkg.dev
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest
+
+    - name: Run unit tests
+      run: |
+        pytest tests/ -v
 
     - name: Build and Push Docker image
       run: |
