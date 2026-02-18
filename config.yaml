@@ -13,7 +13,7 @@ pipeline:
     transform_mode: "inplace"
     transform_suffix: "_vec"
     hyperparams:
-      kbest: 100
+      kbest: 70
 
   random_forest:
     features:
@@ -22,10 +22,10 @@ pipeline:
     transform_mode: "replace"
     transform_suffix: ""
     hyperparams:
-      max_depth: 25
+      max_depth: 20
       n_estimators: 100
-      min_samples_split: 30
-      min_samples_leaf: 5
+      min_samples_split: 50
+      min_samples_leaf: 10
       random_state: 42
 
 # Training parameters
