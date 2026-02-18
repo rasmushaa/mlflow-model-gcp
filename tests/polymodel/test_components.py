@@ -1,5 +1,6 @@
 import pandas as pd
 
+from polymodel.components.models.naive_bayes import NaiveBayesModel
 from polymodel.components.models.random_forest import RandomForestModel
 from polymodel.components.transformers.text_cleaner import TextCleaner
 from polymodel.components.transformers.text_vectorizer import TextVevtorizer
@@ -99,3 +100,27 @@ def test_random_forest_model():
     assert model.classes == [0, 1]
     assert model.signature == ["feature1", "feature2", "extra"]
     assert model.resolved_features == ["feature1", "feature2"]  # Resolved features
+
+
+def test_naive_bayes_model():
+    data = {
+        "feature1": [1, 2, 3, 4, 5],
+        "feature2": [5, 4, 3, 2, 1],
+        "extra": [10, 20, 30, 40, 50],
+        "target": [0, 0, 1, 1, 1],
+    }
+    df = pd.DataFrame(data)
+
+    model = NaiveBayesModel(
+        features=["feature*"],
+        transform_mode="replace",
+        transform_suffix="_pred",
+    )
+    model.fit(df.drop(columns=["target"]), df["target"])
+    predictions = model.predict(df.drop(columns=["target"]))
+    print(predictions)
+
+    assert len(predictions) == len(df)
+    assert model.classes == [0, 1]
+    assert model.signature == ["feature1", "feature2", "extra"]
+    assert model.resolved_features == ["feature1", "feature2"]

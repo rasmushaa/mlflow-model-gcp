@@ -60,7 +60,6 @@ jobs:
         echo "GIT_BRANCH=${{ github.ref_name }}" >> $GITHUB_ENV
         echo "GIT_COMMIT_SHA=${{ github.sha }}" >> $GITHUB_ENV
         echo "GIT_COMMIT_USERNAME=${{ github.actor }}" >> $GITHUB_ENV
-        echo "GIT_COMMIT_AUTHOR_NAME=${{ github.event.head_commit.author.name }}" >> $GITHUB_ENV
 
     - name: Checkout code
       uses: actions/checkout@v3
@@ -111,7 +110,6 @@ jobs:
         GCP_LOCATION: "${{ secrets.GCP_LOCATION }}"
         GCP_BQ_DATASET: "${{ secrets.GCP_BQ_DATASET }}"
         GIT_COMMIT_USERNAME: "${{ env.GIT_COMMIT_USERNAME }}"
-        GIT_COMMIT_AUTHOR_NAME: "${{ env.GIT_COMMIT_AUTHOR_NAME }}"
         GIT_COMMIT_BRANCH: "${{ env.GIT_BRANCH }}"
         EOF
 

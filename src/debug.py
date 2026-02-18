@@ -62,6 +62,7 @@ def setup_logging(
         "git",
         "urllib3.connectionpool",
         "google.auth._default",
+        "matplotlib.font_manager",
     ]
 
     if suppress_external:

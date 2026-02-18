@@ -1,23 +1,23 @@
 # Pipeline parameters
 pipeline:
-  text_cleaner:
-    features:
-      - "receiver"
-    transform_mode: "inplace"
-    transform_suffix: "_cleaned"
-    hyperparams:
-
   text_vectorizer:
     features:
-      - "receiver_cleaned"
+      - "receiver_clean"
     transform_mode: "inplace"
     transform_suffix: "_vec"
     hyperparams:
-      kbest: 70
+      kbest: 50
+
+  naive_bayes:
+    features:
+      - "*_vec"
+    transform_mode: "inplace"
+    transform_suffix: "_nb"
+    hyperparams:
 
   random_forest:
     features:
-      - "*_vec"
+      - "*_nb"
       - "amount"
     transform_mode: "replace"
     transform_suffix: ""
