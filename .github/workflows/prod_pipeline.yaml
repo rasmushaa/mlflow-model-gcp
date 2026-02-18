@@ -1,36 +1,41 @@
 # =============================================================================
-# Production Training Pipeline - Main Branch
+# Build Wheel and Production Training Pipeline - Main Branch
 # =============================================================================
 #
 # PURPOSE:
-# Deploys and executes production ML training pipeline only after code review
-# and merge to main branch.
+# Combined workflow that:
+# 1. Always builds and uploads the polymodel Python wheel package on any PR merge to main
+# 2. Conditionally deploys and executes production ML training pipeline only when
+#    merging from branches starting with "model/"
 #
 # TRIGGER:
-# Runs after the "Build and Upload Wheel to GCP" workflow completes successfully.
-# Only executes when the PR that was merged had a branch name starting with "model/".
-# This ensures the polymodel wheel is built and uploaded before training runs.
-#
-# DEPENDENCIES:
-# - Requires "Build and Upload Wheel to GCP" workflow to complete successfully
-# - Only runs for model/* branch merges to main
+# Runs when a PR is successfully merged to the main branch (not on closed without merging).
+# This ensures only reviewed and approved code versions are published and deployed.
 #
 # LOGIC FLOW:
-# 1. Wait for wheel build workflow to complete successfully
-# 2. Check if merged branch name starts with "model/"
-# 3. Build production Docker image tagged with commit SHA
-# 4. Deploy to Cloud Run Job with production configuration
-# 5. Execute training job immediately with production MLflow experiment
+# WHEEL BUILD (always runs):
+# 1. Extract version from polymodel/pyproject.toml
+# 2. Check if this version already exists in GCP Artifact Registry
+# 3. If version exists: Skip build and upload (prevents duplicate uploads)
+# 4. If version is new: Build wheel with uv and upload via twine
+#
+# PRODUCTION PIPELINE (only for model/* branches):
+# 1. Check if merged branch name starts with "model/"
+# 2. Build production Docker image tagged with commit SHA
+# 3. Deploy to Cloud Run Job with production configuration
+# 4. Execute training job immediately with production MLflow experiment
 #
 # NAMING CONVENTION:
+# - Wheel: polymodel-{version}.whl
 # - Image: banking-pipeline-main:latest
 # - Experiment: Banking-main
 # - Model: BankingModel-main
 #
-# WHY SEPARATED:
-# - Production runs should only happen after code review
-# - Prevents accidental production deployments from feature branches
-# - Ensures production quality gates are met
+# WHY COMBINED:
+# - Wheel must be built before production training runs (which depends on it)
+# - Single workflow avoids complexity of passing data between workflows
+# - Direct access to PR metadata (github.event.pull_request.head.ref) for branch filtering
+# - Ensures production quality gates are met before deployment
 # - Clear separation between dev and prod environments
 #
 # META:
@@ -43,21 +48,17 @@
 # This enables tracking which developer, branch, and commit produced each model.
 # =============================================================================
 
-name: Production Training Pipeline
+name: Build Wheel and Production Training Pipeline
 
 on:
-  workflow_run:
-    workflows: ["Build and Upload Wheel to GCP"]
-    types:
-      - completed
+  pull_request:
+    types: [closed]
     branches:
       - main
 
 jobs:
-  training_pipeline_prod:
-    if: |
-      github.event.workflow_run.conclusion == 'success' &&
-      startsWith(github.event.workflow_run.head_branch, 'model/')
+  build_wheel_and_deploy:
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
 
     permissions:
@@ -65,16 +66,9 @@ jobs:
       id-token: 'write'
 
     steps:
-    - name: Init Environment Variables
-      run: |
-        echo "IMAGE_URI=${{ secrets.GCP_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mlflow-images/banking-pipeline-main:latest" >> $GITHUB_ENV
-        echo "MLFLOW_EXPERIMENT_NAME=Banking-main" >> $GITHUB_ENV
-        echo "MLFLOW_MODEL_NAME=BankingModel-main" >> $GITHUB_ENV
-        echo "GIT_BRANCH=${{ github.event.workflow_run.head_branch }}" >> $GITHUB_ENV
-        echo "GIT_COMMIT_SHA=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_ENV
-        echo "GIT_COMMIT_USERNAME=${{ github.event.workflow_run.actor.login }}" >> $GITHUB_ENV
-        echo "GIT_COMMIT_AUTHOR_NAME=${{ github.event.workflow_run.head_commit.author.name }}" >> $GITHUB_ENV
-
+    # =========================================================================
+    # WHEEL BUILD STEPS (Always run on merge to main)
+    # =========================================================================
     - name: Checkout code
       uses: actions/checkout@v3
 
@@ -85,21 +79,96 @@ jobs:
         workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_POOL }}
         service_account: ${{ secrets.GCP_DEPLOY_SA }}
 
+    - name: Resolve current polymodel version
+      id: polymodel_version
+      run: |
+        VERSION=$(python - <<'EOF'
+        import tomllib
+
+        with open("polymodel/pyproject.toml", "rb") as f:
+            data = tomllib.load(f)
+
+        print(data["project"]["version"])
+        EOF
+        )
+        echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+        echo "Resolved current polymodel version: $VERSION"
+
+    - name: Check if current polymodel version exists in Artifact Registry
+      id: polymodel_exists
+      run: |
+        if gcloud artifacts versions list \
+          --package=polymodel \
+          --repository=python-packages \
+          --location=${{ secrets.GCP_LOCATION }} \
+          --project=${{ secrets.GCP_PROJECT_ID }} \
+          --format="value(name)" | grep -q "${{ steps.polymodel_version.outputs.version }}"; then
+          echo "exists=true" >> "$GITHUB_OUTPUT"
+          echo "Version already exists on GCP Artifact Registry. Skipping build and upload."
+        else
+          echo "exists=false" >> "$GITHUB_OUTPUT"
+          echo "Version does not exist on GCP Artifact Registry. Proceeding with build and upload."
+        fi
+
+    - name: Setup uv
+      if: steps.polymodel_exists.outputs.exists == 'false'
+      uses: astral-sh/setup-uv@v7
+      with:
+          version: "0.9.9"
+
+    - name: Build and Upload polymodel package wheel
+      if: steps.polymodel_exists.outputs.exists == 'false'
+      run: |
+        echo "Installing uv env..."
+        uv venv
+        uv sync --dev # Install dev dependencies from repo pyproject.toml
+
+        echo "Building polymodel ${{ steps.polymodel_version.outputs.version }} with uv..."
+        uv build polymodel/ --out-dir ./polymodel_dist/
+
+        echo "Uploading polymodel ${{ steps.polymodel_version.outputs.version }} to GCP Artifact Registry..."
+        uv run twine upload \
+          --repository-url https://${{ secrets.GCP_LOCATION }}-python.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/python-packages/ \
+          ./polymodel_dist/* --verbose
+
+    - name: Skip upload (version already exists)
+      if: steps.polymodel_exists.outputs.exists == 'true'
+      run: |
+        echo "Skipping upload: polymodel version ${{ steps.polymodel_version.outputs.version }} already exists in Artifact Registry."
+
+    # =========================================================================
+    # PRODUCTION PIPELINE STEPS (Only for model/* branches)
+    # =========================================================================
+    - name: Init Environment Variables
+      if: startsWith(github.event.pull_request.head.ref, 'model/')
+      run: |
+        echo "IMAGE_URI=${{ secrets.GCP_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mlflow-images/banking-pipeline-main:latest" >> $GITHUB_ENV
+        echo "MLFLOW_EXPERIMENT_NAME=Banking-main" >> $GITHUB_ENV
+        echo "MLFLOW_MODEL_NAME=BankingModel-main" >> $GITHUB_ENV
+        echo "GIT_BRANCH=${{ github.event.pull_request.head.ref }}" >> $GITHUB_ENV
+        echo "GIT_COMMIT_SHA=${{ github.sha }}" >> $GITHUB_ENV
+        echo "GIT_COMMIT_USERNAME=${{ github.event.pull_request.user.login }}" >> $GITHUB_ENV
+        echo "GIT_COMMIT_AUTHOR_NAME=${{ github.event.pull_request.head.user.name }}" >> $GITHUB_ENV
+
     - name: Set up Google Cloud SDK
+      if: startsWith(github.event.pull_request.head.ref, 'model/')
       uses: google-github-actions/setup-gcloud@v1
       with:
         project_id: ${{ secrets.GCP_PROJECT_ID }}
 
     - name: Configure Docker to use gcloud as a credential helper
+      if: startsWith(github.event.pull_request.head.ref, 'model/')
       run: |
         gcloud auth configure-docker ${{ secrets.GCP_LOCATION }}-docker.pkg.dev
 
     - name: Build and Push Docker image
+      if: startsWith(github.event.pull_request.head.ref, 'model/')
       run: |
         docker build --build-arg GIT_SHA="${{ env.GIT_COMMIT_SHA }}" -t "${{ env.IMAGE_URI }}" .
         docker push "${{ env.IMAGE_URI }}"
 
     - name: Create env-vars.yaml
+      if: startsWith(github.event.pull_request.head.ref, 'model/')
       run: |
         cat <<EOF > env-vars.yaml
         MLFLOW_TRACKING_URI: "${{ secrets.MLFLOW_TRACKING_URI }}"
@@ -116,6 +185,7 @@ jobs:
         EOF
 
     - name: Deploy and Execute Cloud Run Job
+      if: startsWith(github.event.pull_request.head.ref, 'model/')
       run: |
         gcloud run jobs deploy banking-pipeline-prod \
           --image "${{ env.IMAGE_URI }}" \
@@ -127,6 +197,7 @@ jobs:
           --execute-now
 
     - name: Summary
+      if: startsWith(github.event.pull_request.head.ref, 'model/')
       run: |
         echo "================================================"
         echo "✅ Production Training Pipeline Deployed"
