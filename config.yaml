@@ -1,12 +1,13 @@
 # Pipeline parameters
 pipeline:
+
   text_vectorizer:
     features:
-      - "receiver_clean"
+      - "receiver"
     transform_mode: "inplace"
     transform_suffix: "_vec"
     hyperparams:
-      kbest: 100
+      kbest: 50
 
   naive_bayes:
     features:
