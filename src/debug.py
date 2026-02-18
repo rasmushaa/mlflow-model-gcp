@@ -59,6 +59,9 @@ def setup_logging(
         "alembic.runtime",
         "alembic.runtime.migration",
         "sqlalchemy",
+        "git",
+        "urllib3.connectionpool",
+        "google.auth._default",
     ]
 
     if suppress_external:

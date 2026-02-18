@@ -76,7 +76,7 @@ class Context(dict):
         ValueError
             If required configuration keys are missing or invalid.
         """
-        required_keys = ["model", "transformer", "training", "query", "metrics"]
+        required_keys = ["pipeline", "training", "query", "metrics"]
         for key in required_keys:
             if key not in config:
                 raise ValueError(
@@ -105,24 +105,23 @@ class Context(dict):
             if k in exclude_keys:
                 continue
 
-            if k == "model":
-                name = v.get("name", "unknown_model")
-                hyperparams = v.get("hyperparams", {})
-                for hk, hv in hyperparams.items():
-                    items[f"model.{name}.{hk}"] = hv
+            if k == "pipeline":
+                for step_name, step_config in v.items():
+                    items[f"pipeline.{step_name}.features"] = step_config.get(
+                        "features", []
+                    )
+                    hyperparams = step_config.get("hyperparams", {})
+                    hyperparams = (
+                        hyperparams if hyperparams is not None else {}
+                    )  # User can lave empty
+                    for hk, hv in hyperparams.items():
+                        items[f"pipeline.{step_name}.{hk}"] = hv
 
-            elif k == "transformer":
-                for i, transformer in enumerate(v):
-                    t_name = transformer.get("name", f"unknown_transformer_{i}")
-                    t_hyperparams = transformer.get("hyperparams", {})
-                    for tk, tv in t_hyperparams.items():
-                        items[f"transformer.{t_name}.{tk}"] = tv
-
+            # Recursively flatten nested dictionaries, but only one level deep for simplicity
             elif isinstance(v, dict):
                 sub_items = self.__flatten_dict(v)
                 for sub_k, sub_v in sub_items.items():
                     items[f"{k}.{sub_k}"] = sub_v
-
             else:
                 items[k] = v
 

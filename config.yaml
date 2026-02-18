@@ -1,36 +1,36 @@
-# Model parameters
-model:
-  name: "random_forest"
-  hyperparams:
-    max_depth: 25
-    n_estimators: 100
-    min_samples_split: 30
-    min_samples_leaf: 5
-    random_state: 42
-
-# Transformer parameters
-transformer:
-  - name: "feature_selector"
+# Pipeline parameters
+pipeline:
+  text_cleaner:
+    features:
+      - "receiver"
+    transform_mode: "inplace"
+    transform_suffix: "_cleaned"
     hyperparams:
-      features:
-        - "receiver"
-        - "amount"
 
-  - name: "text_cleaner"
+  text_vectorizer:
+    features:
+      - "receiver_cleaned"
+    transform_mode: "inplace"
+    transform_suffix: "_vec"
     hyperparams:
-      text_column: "receiver"
+      kbest: 100
 
-  - name: "kbest_text_vector"
+  random_forest:
+    features:
+      - "*_vec"
+      - "amount"
+    transform_mode: "replace"
+    transform_suffix: ""
     hyperparams:
-      text_column: "receiver"
-      kbest: 50
+      max_depth: 25
+      n_estimators: 100
+      min_samples_split: 30
+      min_samples_leaf: 5
+      random_state: 42
 
 # Training parameters
 training:
   target_column: "category"
-  features:
-    - "receiver"
-    - "amount"
   n_splits: 5
   shuffle: false
 

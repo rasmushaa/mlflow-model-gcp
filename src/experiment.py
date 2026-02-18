@@ -206,7 +206,7 @@ class ExperimentManager:
         # Log model metadata
         self.log_dict(pipeline.layers, "layers")
         self.set_tags({"model.architecture": pipeline.architecture})
-        self.set_tags({"model.features": pipeline.features})
+        self.set_tags({"model.features": pipeline.resolved_features})
 
         # Log polymodel version constraints
         current_version = version("polymodel")
@@ -232,7 +232,7 @@ class ExperimentManager:
             tags={
                 "package.version": current_version,
                 "commit.sha": os.getenv("GIT_COMMIT_SHA", "unknown"),
-                "model.features": pipeline.features,
+                "model.features": pipeline.resolved_features,
                 "model.architecture": pipeline.architecture,
             },
         )
@@ -279,7 +279,9 @@ class ExperimentManager:
             The DataFrame containing only the features used by the model
         """
         input_example = data_example.iloc[:5]
-        input_example = input_example[pipeline.features]  # Use only required features
+        input_example = input_example[
+            pipeline.resolved_features
+        ]  # Use only required features
         return input_example
 
     def __find_or_create_experiment(self):
