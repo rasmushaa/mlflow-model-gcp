@@ -7,7 +7,7 @@ pipeline:
     transform_mode: "inplace"
     transform_suffix: "_vec"
     hyperparams:
-      kbest: 50
+      kbest: 100
 
   naive_bayes:
     features:
