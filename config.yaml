@@ -1,9 +1,15 @@
 # Pipeline parameters
 pipeline:
+  text_cleaner:
+    features:
+      - "receiver"
+    transform_mode: "inplace"
+    transform_suffix: "_clean"
+    hyperparams:
 
   text_vectorizer:
     features:
-      - "receiver"
+      - "receiver_clean"
     transform_mode: "inplace"
     transform_suffix: "_vec"
     hyperparams:
