@@ -148,7 +148,6 @@ jobs:
         echo "GIT_BRANCH=${{ github.event.pull_request.head.ref }}" >> $GITHUB_ENV
         echo "GIT_COMMIT_SHA=${{ github.sha }}" >> $GITHUB_ENV
         echo "GIT_COMMIT_USERNAME=${{ github.event.pull_request.user.login }}" >> $GITHUB_ENV
-        echo "GIT_COMMIT_AUTHOR_NAME=${{ github.event.pull_request.head.user.name }}" >> $GITHUB_ENV
 
     - name: Set up Google Cloud SDK
       if: startsWith(github.event.pull_request.head.ref, 'model/')
@@ -180,7 +179,6 @@ jobs:
         GCP_LOCATION: "${{ secrets.GCP_LOCATION }}"
         GCP_BQ_DATASET: "${{ secrets.GCP_BQ_DATASET }}"
         GIT_COMMIT_USERNAME: "${{ env.GIT_COMMIT_USERNAME }}"
-        GIT_COMMIT_AUTHOR_NAME: "${{ env.GIT_COMMIT_AUTHOR_NAME }}"
         GIT_COMMIT_BRANCH: "${{ env.GIT_BRANCH }}"
         EOF
 
