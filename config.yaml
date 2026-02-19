@@ -19,7 +19,6 @@ pipeline:
     features:
       - "*_nb"
       - "amount"
-      - "*_date_signal"
     transform_mode: "replace"
     transform_suffix: ""
     hyperparams:

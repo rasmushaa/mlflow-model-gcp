@@ -3,6 +3,7 @@ import pytest
 
 from polymodel.components.models.naive_bayes import NaiveBayesModel
 from polymodel.components.models.random_forest import RandomForestModel
+from polymodel.components.models.xgboost import XGBoostModel
 from polymodel.components.transformers.date_signal import DateSignal
 from polymodel.components.transformers.text_cleaner import TextCleaner
 from polymodel.components.transformers.text_vectorizer import TextVevtorizer
@@ -165,3 +166,31 @@ def test_date_signal():
     pytest.approx(
         transformed_df["date_year_sin_sig"].iloc[1], 0.01
     ) == -1  # Missing date treated as 1970-01-01, which is month 1
+
+
+def test_xgboost_model():
+    data = {
+        "feature1": [1, 2, 3, 4, 5],
+        "feature2": [5, 4, 3, 2, 1],
+        "extra": [10, 20, 30, 40, 50],
+        "target": [0, 0, 1, 1, 1],
+    }
+    df = pd.DataFrame(data)
+
+    model = XGBoostModel(
+        features=["feature*"],
+        transform_mode="replace",
+        transform_suffix="_pred",
+        n_estimators=10,
+    )
+    model.fit(df.drop(columns=["target"]), df["target"])
+    predictions = model.predict(df.drop(columns=["target"]))
+    probs = model.predict_proba(df.drop(columns=["target"]))
+    print(predictions)
+    print(probs)
+
+    assert len(predictions) == len(df)
+    assert probs.shape == (len(df), 2)  # Should have probabilities for both classes
+    assert model.classes == [0, 1]
+    assert model.signature == ["feature1", "feature2", "extra"]
+    assert model.resolved_features == ["feature1", "feature2"]
