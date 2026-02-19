@@ -122,4 +122,5 @@ jobs:
           --env-vars-file env-vars.yaml \
           --cpu 1 \
           --memory 800Mi \
-          --execute-now
+          --execute-now \
+          --max-retries 0

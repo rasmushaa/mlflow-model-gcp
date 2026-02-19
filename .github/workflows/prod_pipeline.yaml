@@ -192,7 +192,8 @@ jobs:
           --env-vars-file env-vars.yaml \
           --cpu 1 \
           --memory 800Mi \
-          --execute-now
+          --execute-now \
+          --max-retries 0
 
     - name: Summary
       if: startsWith(github.event.pull_request.head.ref, 'model/')
