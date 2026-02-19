@@ -1,7 +1,9 @@
 import pandas as pd
+import pytest
 
 from polymodel.components.models.naive_bayes import NaiveBayesModel
 from polymodel.components.models.random_forest import RandomForestModel
+from polymodel.components.transformers.date_signal import DateSignal
 from polymodel.components.transformers.text_cleaner import TextCleaner
 from polymodel.components.transformers.text_vectorizer import TextVevtorizer
 
@@ -124,3 +126,42 @@ def test_naive_bayes_model():
     assert model.classes == [0, 1]
     assert model.signature == ["feature1", "feature2", "extra"]
     assert model.resolved_features == ["feature1", "feature2"]
+
+
+def test_date_signal():
+    data = {
+        "date": [
+            "2020-09-15",
+            None,
+        ]
+    }
+    df = pd.DataFrame(data)
+
+    transformer = DateSignal(
+        features=["date"], transform_mode="replace", transform_suffix="_sig"
+    )
+    transformer.fit(df)
+    transformed_df = transformer.transform(df)
+    print(transformed_df)
+
+    pytest.approx(
+        transformed_df["date_year_sin_sig"].iloc[0], 0.01
+    ) == -1  # September is month 9, so sin(2*pi*9/12) = -1
+    pytest.approx(
+        transformed_df["date_year_cos_sig"].iloc[0], 0.01
+    ) == 0  # cos(2*pi*9/12) = 0
+    pytest.approx(
+        transformed_df["date_month_sin_sig"].iloc[0], 0.01
+    ) == 0.0  # Day 15, so sin(2*pi*15/31) should be close to 0
+    pytest.approx(
+        transformed_df["date_month_cos_sig"].iloc[0], 0.01
+    ) == -1  # cos(2*pi*15/31) should be close to -1
+    pytest.approx(
+        transformed_df["date_dayofweek_sig"].iloc[0], 0.01
+    ) == 1  # September 15, 2020 was a Tuesday (dayofweek=1)
+    pytest.approx(
+        transformed_df["date_is_weekend_sig"].iloc[0], 0.01
+    ) == 0  # Tuesday is not a weekend
+    pytest.approx(
+        transformed_df["date_year_sin_sig"].iloc[1], 0.01
+    ) == -1  # Missing date treated as 1970-01-01, which is month 1

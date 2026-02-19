@@ -1,5 +1,6 @@
 from .models.naive_bayes import NaiveBayesModel
 from .models.random_forest import RandomForestModel
+from .transformers.date_signal import DateSignal
 from .transformers.text_cleaner import TextCleaner
 from .transformers.text_vectorizer import TextVevtorizer
 
@@ -9,6 +10,7 @@ COMPONENTS = {
     "naive_bayes": NaiveBayesModel,
     "text_cleaner": TextCleaner,
     "text_vectorizer": TextVevtorizer,
+    "date_signal": DateSignal,
 }
 
 
