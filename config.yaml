@@ -15,17 +15,13 @@ pipeline:
     transform_suffix: "_nb"
     hyperparams:
 
-  random_forest:
+  xgboost:
     features:
       - "*_nb"
       - "amount"
     transform_mode: "replace"
     transform_suffix: ""
     hyperparams:
-      max_depth: 20
-      n_estimators: 100
-      min_samples_split: 50
-      min_samples_leaf: 10
       random_state: 42
 
 # Training parameters

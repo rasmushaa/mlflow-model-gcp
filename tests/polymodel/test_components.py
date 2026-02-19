@@ -169,6 +169,7 @@ def test_date_signal():
 
 
 def test_xgboost_model():
+    # Test with numeric classes
     data = {
         "feature1": [1, 2, 3, 4, 5],
         "feature2": [5, 4, 3, 2, 1],
@@ -194,3 +195,40 @@ def test_xgboost_model():
     assert model.classes == [0, 1]
     assert model.signature == ["feature1", "feature2", "extra"]
     assert model.resolved_features == ["feature1", "feature2"]
+
+    # Test with string classes
+    data_string = {
+        "feature1": [1, 2, 3, 4, 5, 6],
+        "feature2": [5, 4, 3, 2, 1, 0],
+        "extra": [10, 20, 30, 40, 50, 60],
+        "target": [
+            "CLOTHING",
+            "CLOTHING",
+            "FOOD",
+            "FOOD",
+            "ENTERTAINMENT",
+            "ENTERTAINMENT",
+        ],
+    }
+    df_string = pd.DataFrame(data_string)
+
+    model_string = XGBoostModel(
+        features=["feature*"],
+        transform_mode="replace",
+        transform_suffix="_pred",
+        n_estimators=10,
+    )
+    model_string.fit(df_string.drop(columns=["target"]), df_string["target"])
+    predictions_string = model_string.predict(df_string.drop(columns=["target"]))
+    probs_string = model_string.predict_proba(df_string.drop(columns=["target"]))
+    print(predictions_string)
+    print(probs_string)
+
+    assert len(predictions_string) == len(df_string)
+    assert probs_string.shape == (
+        len(df_string),
+        3,
+    )  # Should have probabilities for 3 classes
+    assert sorted(model_string.classes) == ["CLOTHING", "ENTERTAINMENT", "FOOD"]
+    # Verify predictions are strings
+    assert all(isinstance(pred, str) for pred in predictions_string)
