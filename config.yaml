@@ -1,19 +1,12 @@
 # Pipeline parameters
 pipeline:
-  date_signal:
-    features:
-      - "date"
-    transform_mode: "inplace"
-    transform_suffix: "_date_signal"
-    hyperparams:
-
   text_vectorizer:
     features:
       - "receiver"
     transform_mode: "inplace"
     transform_suffix: "_vec"
     hyperparams:
-      kbest: 100
+      kbest: 500
 
   naive_bayes:
     features:
