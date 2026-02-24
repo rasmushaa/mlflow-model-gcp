@@ -121,6 +121,6 @@ jobs:
           --service-account ${{ secrets.GCP_MLFLOW_SA_NAME }} \
           --env-vars-file env-vars.yaml \
           --cpu 1 \
-          --memory 800Mi \
+          --memory 2000Mi \
           --execute-now \
           --max-retries 0

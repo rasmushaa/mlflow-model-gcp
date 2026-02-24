@@ -42,9 +42,9 @@ training:
 
 # Optimization parameters
 optimization:
-  startup_jobs: 10
+  startup_jobs: 5
   max_evals: 50
-  early_stop_patience: 10
+  early_stop_patience: 5
   loss_metric: "f1_score_macro_mean"
   higher_is_better: true
 
