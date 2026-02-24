@@ -1,3 +1,8 @@
+# Configuration file for the ML pipeline
+# Example for hyperopt:
+# {"type": "int" | "float", "min": value, "max": value, "step": value (optional)}
+# {"type": "categorical", "choices": [value1, value2, ...]}
+
 # Pipeline parameters
 pipeline:
   text_vectorizer:
@@ -6,7 +11,7 @@ pipeline:
     transform_mode: "inplace"
     transform_suffix: "_vec"
     hyperparams:
-      kbest: 1000
+      kbest: {"type": "int", "min": 50, "max": 1100, "step": 10}
 
   naive_bayes:
     features:
@@ -22,10 +27,11 @@ pipeline:
     transform_mode: "replace"
     transform_suffix: ""
     hyperparams:
-      max_depth: 20
-      n_estimators: 100
-      min_samples_split: 50
-      min_samples_leaf: 10
+      max_depth: {"type": "int", "min": 5, "max": 50}
+      n_estimators: {"type": "int", "min": 50, "max": 500, "step": 10}
+      min_samples_split: {"type": "int", "min": 10, "max": 100}
+      min_samples_leaf: {"type": "int", "min": 10, "max": 100}
+      criterion: {"type": "choice", "choices": ["gini", "entropy"]}
       random_state: 42
 
 # Training parameters
@@ -33,6 +39,14 @@ training:
   target_column: "category"
   n_splits: 5
   shuffle: false
+
+# Optimization parameters
+optimization:
+  startup_jobs: 10
+  max_evals: 50
+  early_stop_patience: 10
+  loss_metric: "f1_score_macro_mean"
+  higher_is_better: true
 
 # Data parameters
 query:

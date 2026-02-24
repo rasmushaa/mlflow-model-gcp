@@ -189,7 +189,7 @@ class Pipeline:
         self
             The fitted pipeline instance.
         """
-        logger.info("Fiting pipeline...")
+        logger.debug("Fiting pipeline...")
         for component in self._components:
             X = component.fit(X, y).transform(X)
         logger.debug("Resolved layers:\n%s", self.layers)

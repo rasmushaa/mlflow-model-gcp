@@ -24,4 +24,4 @@ load_env() {
 
 
 load_env
-uv run src/main.py
+uv run -m src.main

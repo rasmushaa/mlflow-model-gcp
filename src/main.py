@@ -1,13 +1,11 @@
 import logging
 
-from metrics_toolbox import EvaluatorBuilder
-
-from context import Context
-from debug import setup_logging
-from experiment import ExperimentManager
-from loader import DataLoader
 from polymodel.pipeline import Pipeline
-from training import kfold_iterator
+from src.context import Context
+from src.debug import setup_logging
+from src.experiment import ExperimentManager
+from src.loader import DataLoader
+from src.optimise import optimize_model
 
 setup_logging(level=logging.INFO, suppress_external=True)
 
@@ -16,10 +14,9 @@ logger = logging.getLogger(__name__)
 
 def main():
 
-    context = Context()
+    context = Context("config.yaml")
     manager = ExperimentManager()
     loader = DataLoader(**context["query"])
-    evaluator = EvaluatorBuilder().from_dict(context["metrics"]).build()
 
     with manager.start_run():
 
@@ -30,33 +27,28 @@ def main():
         data = loader.load()
         manager.log_input(data, "Raw-data")
 
-        # K-Fold Cross Validation
-        for fold, X_train, X_test, y_train, y_test in kfold_iterator(
-            data, **context["training"]
-        ):
-            logger.info(f"Fold {fold}: Train shape: {X_train.shape}")
+        # Optimize and evaluate model
+        results = optimize_model(pipeline_cls=Pipeline, data=data, context=context)
 
-            # Build and Fit a new pipeline for each fold
-            pipeline = Pipeline.from_config(context["pipeline"])
-            pipeline.fit(X_train, y_train)
+        # Log model
+        manager.log_model(
+            results.model,
+            data_example=data.drop(columns=context["training"]["target_column"]),
+        )
 
-            # Evaluate model
-            evaluator.add_model_evaluation(model=pipeline, X=X_test, y_true=y_test)
-
-        # Final model training on full data for model registry
-        X_full = data.drop(columns=[context["training"]["target_column"]])
-        y_full = data[context["training"]["target_column"]]
-        pipeline = Pipeline.from_config(context["pipeline"])
-        pipeline.fit(X_full, y_full)
-        manager.log_model(pipeline, data_example=X_full)
-
-        # Metrics has to be logged after model logging to avoid duplication issues due this Bug: https://github.com/ecmwf/anemoi-core/issues/190
-        results = evaluator.get_results()
-        manager.log_figures(results["figures"])
-        manager.log_metrics(results["values"])
-        for metric, history in results["steps"].items():
+        # Log results
+        manager.log_figures(results.metrics["figures"])
+        manager.log_metrics(results.metrics["values"])
+        for metric, history in results.metrics["steps"].items():
             for i, value in enumerate(history):
                 manager.log_metric(metric, value, step=i)
+        for i, loss in enumerate(results.loss_history):
+            manager.log_metric("optimization_loss", loss, step=i)
+
+        # Log best hyperparameters
+        manager.log_params(
+            {f"best_hyperparams.{k}": v for k, v in results.best_params.items()}
+        )
 
 
 if __name__ == "__main__":
