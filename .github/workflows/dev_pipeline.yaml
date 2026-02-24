@@ -86,7 +86,7 @@ jobs:
     - name: Create virtual environment
       run: uv venv
 
-    - name: Test dependencies (latest version)
+    - name: Run tests
       run: |
         uv pip install -e .[test]
         python --version
