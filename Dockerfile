@@ -20,4 +20,4 @@ RUN uv venv --system && uv sync --frozen
 ARG GIT_SHA
 ENV GIT_COMMIT_SHA=${GIT_SHA}
 
-CMD ["uv", "run", "src/main.py"]
+CMD ["uv", "run", "-m", "src.main"]

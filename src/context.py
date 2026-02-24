@@ -18,16 +18,42 @@ class Context(dict):
         Get the full configuration as a flattened dictionary to log to mlflow, etc.
     """
 
-    def __init__(self):
+    def __init__(self, config_path: str):
         """Initialize the Context by loading configuration and hyperparameters from YAML files.
 
         The config and hyperparameters format is validated during loading.
         Actual values are not validated here.
+
+        Parameters
+        ----------
+        config_path: str
+            The path to the configuration YAML file.
         """
         super().__init__()
-        config = self.__open_config("config.yaml")
+        config = self.__open_config(config_path)
         self.update(config)
         logger.info(f"Loaded configuration: {self}")
+
+    @classmethod
+    def from_dict(cls, config_dict: dict):
+        """Alternative constructor to create Context directly from a dictionary.
+
+        This is useful for testing or when the configuration is already available as a dictionary.
+
+        Parameters
+        ----------
+        config_dict: dict
+            The configuration as a dictionary.
+
+        Returns
+        -------
+        Context
+            An instance of Context initialized with the provided configuration.
+        """
+        instance = cls.__new__(cls)
+        super(Context, instance).__init__()
+        instance.update(config_dict)
+        return instance
 
     def ravel(self, exclude_keys: List[str] = []) -> dict:
         """Get the full configuration as a flattened dictionary,

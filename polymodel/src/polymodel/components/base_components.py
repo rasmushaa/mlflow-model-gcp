@@ -1,9 +1,12 @@
 import fnmatch
+import logging
 from abc import ABC, abstractmethod
 from enum import Enum
 
 import numpy as np
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 
 class TransformMode(str, Enum):
@@ -196,8 +199,11 @@ class BaseTransformer(BaseComponent):
         """
         self._signature = X.columns.tolist()
         self._resolved_features = self._get_selected_features(X)
-        selected = self._resolved_features
-        self._fit_selected(X[selected], y)
+        selected = X[self._resolved_features]
+        logger.debug(
+            f"Fitting {self.__class__.__name__} with: {selected.shape}\n{selected.head()}"
+        )
+        self._fit_selected(selected, y)
         return self
 
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:
@@ -309,9 +315,7 @@ class BaseModel(BaseTransformer):
             with appropriately suffixed column names.
         """
         preds = self.predict_proba(X_selected)
-        return pd.DataFrame(
-            preds, columns=[f"{col}{self._transform_suffix}" for col in self.classes]
-        )
+        return pd.DataFrame(preds, columns=self.classes)
 
     @property
     @abstractmethod

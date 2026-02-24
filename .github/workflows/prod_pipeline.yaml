@@ -28,8 +28,8 @@
 # NAMING CONVENTION:
 # - Wheel: polymodel-{version}.whl
 # - Image: banking-pipeline-main:latest
-# - Experiment: Banking-main
-# - Model: BankingModel-main
+# - Experiment: Banking
+# - Model: BankingModel
 #
 # WHY COMBINED:
 # - Wheel must be built before production training runs (which depends on it)
@@ -143,12 +143,11 @@ jobs:
       if: startsWith(github.event.pull_request.head.ref, 'model/')
       run: |
         echo "IMAGE_URI=${{ secrets.GCP_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mlflow-images/banking-pipeline-main:latest" >> $GITHUB_ENV
-        echo "MLFLOW_EXPERIMENT_NAME=Banking-main" >> $GITHUB_ENV
-        echo "MLFLOW_MODEL_NAME=BankingModel-main" >> $GITHUB_ENV
+        echo "MLFLOW_EXPERIMENT_NAME=Banking" >> $GITHUB_ENV
+        echo "MLFLOW_MODEL_NAME=BankingModel" >> $GITHUB_ENV
         echo "GIT_BRANCH=${{ github.event.pull_request.head.ref }}" >> $GITHUB_ENV
         echo "GIT_COMMIT_SHA=${{ github.sha }}" >> $GITHUB_ENV
         echo "GIT_COMMIT_USERNAME=${{ github.event.pull_request.user.login }}" >> $GITHUB_ENV
-        echo "GIT_COMMIT_AUTHOR_NAME=${{ github.event.pull_request.head.user.name }}" >> $GITHUB_ENV
 
     - name: Set up Google Cloud SDK
       if: startsWith(github.event.pull_request.head.ref, 'model/')
@@ -180,7 +179,6 @@ jobs:
         GCP_LOCATION: "${{ secrets.GCP_LOCATION }}"
         GCP_BQ_DATASET: "${{ secrets.GCP_BQ_DATASET }}"
         GIT_COMMIT_USERNAME: "${{ env.GIT_COMMIT_USERNAME }}"
-        GIT_COMMIT_AUTHOR_NAME: "${{ env.GIT_COMMIT_AUTHOR_NAME }}"
         GIT_COMMIT_BRANCH: "${{ env.GIT_BRANCH }}"
         EOF
 
@@ -193,8 +191,9 @@ jobs:
           --service-account ${{ secrets.GCP_MLFLOW_SA_NAME }} \
           --env-vars-file env-vars.yaml \
           --cpu 1 \
-          --memory 800Mi \
-          --execute-now
+          --memory 2000Mi \
+          --execute-now \
+          --max-retries 0
 
     - name: Summary
       if: startsWith(github.event.pull_request.head.ref, 'model/')
