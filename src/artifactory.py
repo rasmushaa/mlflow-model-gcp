@@ -67,7 +67,7 @@ def __upload_manifest(manifest_dict: dict[str, Any]):
 
         # Upload temp file to GCS
         bucket = storage.Client().get_bucket("banking_model_assets")
-        blob = bucket.blob("/manifest.json")
+        blob = bucket.blob("manifest.json")
         blob.upload_from_filename(tmp_path)
 
         # Clean up temp file
@@ -134,7 +134,7 @@ def __get_manifest() -> dict[str, Any]:
         # Init GCS client and download manifest.json to a temp file
         client = storage.Client()
         bucket = client.get_bucket("banking_model_assets")
-        blob = bucket.blob("/manifest.json")
+        blob = bucket.blob("manifest.json")
         with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tmp:
             blob.download_to_filename(tmp.name)
             tmp_path = tmp.name
@@ -181,15 +181,13 @@ def copy_model_artifacts_to_gcs(env: str) -> None:
     # 1) Fetch current model versions from MLflow
     mlflow_version_info = __get_active_model_version(f"BankingModel-{env}")
     logger.info(
-        f"""Current MLflow model version: v{mlflow_version_info['version']} sha({mlflow_version_info['commit_sha']})"""
+        f"""Current MLflow {env} model version: v({mlflow_version_info['version']}) sha({mlflow_version_info['commit_sha']})"""
     )
 
     # 2) Fetch current manifest from GCS
     manifest = __get_manifest()
     logger.info(
-        f"""Current manifest versions from GCS:
-                Prod v{manifest['prod']['version']},
-                Stg v{manifest['stg']['version']}"""
+        f"""Current manifest {env} model version: v({manifest[env]['version']})"""
     )
 
     # 3) Compare versions and update GCS if needed

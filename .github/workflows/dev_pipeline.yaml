@@ -84,7 +84,7 @@ jobs:
 
     - name: Run tests
       run: |
-        uv pip install -e .[test]
+        uv sync
         python --version
         uv pip list
         uv run pytest
