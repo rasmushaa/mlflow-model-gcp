@@ -1,0 +1,53 @@
+name: 'Setup Runtime Environment'
+
+inputs:
+  gcp_project_id:
+    required: true
+    description: 'GCP project ID'
+  gcp_workload_identity_pool:
+    required: true
+    description: 'GCP Workload Identity Pool provider'
+  gcp_deploy_sa:
+    required: true
+    description: 'GCP deployment service account'
+  gcp_location:
+    required: true
+    description: 'GCP region/location'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Authenticate with Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        project_id: ${{ inputs.gcp_project_id }}
+        workload_identity_provider: ${{ inputs.gcp_workload_identity_pool }}
+        service_account: ${{ inputs.gcp_deploy_sa }}
+
+    - name: Set up Google Cloud SDK
+      uses: google-github-actions/setup-gcloud@v1
+      with:
+        project_id: ${{ inputs.gcp_project_id }}
+
+    - name: Configure Docker to use gcloud as a credential helper
+      run: gcloud auth configure-docker ${{ inputs.gcp_location }}-docker.pkg.dev
+      shell: bash
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v7
+      with:
+          version: "0.9.9"
+
+    - name: Create virtual environment
+      run: uv venv
+      shell: bash
+
+    - name: Install dependencies
+      run: |
+        uv sync --dev
+        python --version
+        uv pip list
+      shell: bash

@@ -1,0 +1,27 @@
+name: 'Init Environment Variables'
+
+inputs:
+  env:
+    required: true
+    description: 'Target environment (dev, stg, prod)'
+  gcp_location:
+    required: true
+    description: 'GCP region/location'
+  gcp_project_id:
+    required: true
+    description: 'GCP project ID'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set Environment Variables
+      run: |
+        echo "IMAGE_URI=${{ inputs.gcp_location }}-docker.pkg.dev/${{ inputs.gcp_project_id }}/mlflow-images/banking-pipeline-${{ inputs.env }}:latest" >> $GITHUB_ENV
+        echo "MLFLOW_EXPERIMENT_NAME=Banking-${{ inputs.env }}" >> $GITHUB_ENV
+        echo "MLFLOW_MODEL_NAME=BankingModel-${{ inputs.env }}" >> $GITHUB_ENV
+        echo "GIT_BRANCH=${{ github.ref_name }}" >> $GITHUB_ENV
+        echo "GIT_COMMIT_SHA=${{ github.sha }}" >> $GITHUB_ENV
+        echo "GIT_COMMIT_HEAD_SHA=${{ github.event.pull_request.head.sha }}" >> $GITHUB_ENV
+        echo "GIT_COMMIT_USERNAME=${{ github.actor }}" >> $GITHUB_ENV
+        echo "ENV=${{ inputs.env }}" >> $GITHUB_ENV
+      shell: bash

@@ -1,0 +1,143 @@
+
+# =============================================================================
+# Unified Training Pipeline - Dev / Staging / Production
+# =============================================================================
+#
+# PURPOSE:
+# Single workflow that handles the full ML training pipeline across all
+# environments (dev, stg, prod). Refactored from the separate dev_pipeline
+# and prod_pipeline workflows.
+#
+# TRIGGER:
+# - push to dev         → Runs pipeline in dev environment
+# - PR merged to stg    → Runs pipeline in stg environment
+# - PR merged to main   → Build wheel, Runs pipeline in prod environment
+#
+# LOGIC FLOW:
+# 1. Determine environment (dev/stg/prod) from target branch
+# 2. Setup: checkout, GCP auth, install dependencies (via setup-env action)
+# 3. Set environment-specific variables (via init-env-vars action)
+# 4. Run unit tests
+# 5. [main only] Resolve polymodel version, check Artifact Registry,
+#    build and push wheel if version is new
+# 6. Build and push Docker image (tagged with git SHA)
+# 7. Deploy and execute Cloud Run Job with environment config
+#
+# COMPOSITE ACTIONS:
+# - setup-env/                       → Checkout, GCP auth, uv install, dependencies
+# - init-env-vars/                   → Set IMAGE_URI, MLFLOW_*, GIT_* env vars
+# - resolve-polymodel-version/       → Extract version from polymodel/pyproject.toml
+# - does-polymodel-version-exists/   → Check Artifact Registry for existing version
+# - build-and-push-wheel/            → Build wheel with uv and upload via twine
+# - deploy-cloud-job/                → Deploy and execute Cloud Run Job
+#
+# NAMING CONVENTION:
+# - Image: banking-pipeline-{env}:latest
+# - Experiment: Banking-{env}
+# - Model: BankingModel-{env}
+# - Wheel: polymodel-{version}.whl (prod only)
+#
+# META:
+# Docker image embeds git commit SHA (GIT_SHA build arg) for traceability.
+# Git metadata (user, branch, commit) is passed to Cloud Run and logged
+# as MLflow tags for experiment provenance tracking.
+# =============================================================================
+
+name: Train and Evaluate Model
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+      - stg
+  push:
+    branches:
+      - dev
+
+jobs:
+  training_pipeline:
+    # Only run on push (dev) or merged PRs (stg/main)
+    if: github.event_name == 'push' || github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: 'read'
+      id-token: 'write' # Required for Workload Identity Federation
+
+    steps:
+    - name: Determine environment
+      id: determine-env
+      run: |
+        if [ "${{ github.ref_name }}" == "main" ]; then
+          echo "ENV=prod" >> $GITHUB_ENV
+        elif [ "${{ github.ref_name }}" == "stg" ]; then
+          echo "ENV=stg" >> $GITHUB_ENV
+        else
+          echo "ENV=dev" >> $GITHUB_ENV
+        fi
+      shell: bash
+
+    # Auth GCP, Sync code, Install deps
+    - name: Setup environment
+      uses: ./.github/workflows/setup-env
+      with:
+        gcp_project_id: ${{ secrets.GCP_PROJECT_ID }}
+        gcp_workload_identity_pool: ${{ secrets.GCP_WORKLOAD_IDENTITY_POOL }}
+        gcp_deploy_sa: ${{ secrets.GCP_DEPLOY_SA }}
+        gcp_location: ${{ secrets.GCP_LOCATION }}
+
+    # Set environment variables based on branch
+    - name: Init Environment Variables
+      uses: ./.github/workflows/init-env-vars
+      with:
+        env: ${{ env.ENV }}
+        gcp_location: ${{ secrets.GCP_LOCATION }}
+        gcp_project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+    # Run tests
+    - name: Run tests
+      run: uv run pytest
+      shell: bash
+
+    # Build new Polymodel wheel, if on main branch
+    - name: Resolve Polymodel Version
+      if: github.ref_name == 'main'
+      id: resolve_polymodel_version
+      uses: ./.github/workflows/resolve-polymodel-version
+
+    - name: Check if Polymodel version exists on Artifact Registry
+      if: github.ref_name == 'main'
+      id: polymodel_exists
+      uses: ./.github/workflows/does-polymodel-version-exists
+      with:
+        version: ${{ steps.resolve_polymodel_version.outputs.version }}
+        gcp_location: ${{ secrets.GCP_LOCATION }}
+        gcp_project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+    - name: Build and Push Polymodel Wheel
+      if: github.ref_name == 'main' && steps.polymodel_exists.outputs.exists == 'false'
+      uses: ./.github/workflows/build-and-push-wheel
+      with:
+        version: ${{ steps.resolve_polymodel_version.outputs.version }}
+        gcp_location: ${{ secrets.GCP_LOCATION }}
+        gcp_project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+    # Build and Push Docker image
+    - name: Build and Push Docker image
+      run: |
+        docker build --build-arg GIT_SHA="${{ env.GIT_COMMIT_SHA }}" -t "${{ env.IMAGE_URI }}" .
+        docker push "${{ env.IMAGE_URI }}"
+
+    # Deploy and execute Cloud Run Job
+    - name: Deploy Cloud Run Job
+      uses: ./.github/workflows/deploy-cloud-job
+      with:
+        env: ${{ env.ENV }}
+        gcp_location: ${{ secrets.GCP_LOCATION }}
+        gcp_project_id: ${{ secrets.GCP_PROJECT_ID }}
+        gcp_mlflow_sa_name: ${{ secrets.GCP_MLFLOW_SA_NAME }}
+        gcp_bq_dataset: ${{ secrets.GCP_BQ_DATASET }}
+        mlflow_tracking_uri: ${{ secrets.MLFLOW_TRACKING_URI }}
+        mlflow_tracking_username: ${{ secrets.MLFLOW_TRACKING_USERNAME }}
+        mlflow_tracking_password: ${{ secrets.MLFLOW_TRACKING_PASSWORD }}
