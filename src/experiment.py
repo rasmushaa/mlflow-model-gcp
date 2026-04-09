@@ -325,7 +325,7 @@ class ExperimentManager:
             {
                 "package.version": version("polymodel"),
                 "commit.sha": os.getenv("GIT_COMMIT_SHA", "unknown"),
-                "commit.head.sha": os.getenv("GIT_MERGE_COMMIT_SHA", "unknown"),
+                "commit.head.sha": os.getenv("GIT_COMMIT_HEAD_SHA", "unknown"),
                 "commit.user": os.getenv("GIT_COMMIT_USERNAME", "unknown"),
                 "commit.branch": os.getenv("GIT_COMMIT_BRANCH", "unknown"),
             }
