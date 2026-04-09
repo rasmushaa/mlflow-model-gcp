@@ -1,0 +1,27 @@
+name: 'Build and Push Polymodel Wheel'
+
+inputs:
+  version:
+    required: true
+    description: 'Resolved polymodel version from pyproject.toml'
+  gcp_location:
+    required: true
+    description: 'GCP region/location'
+  gcp_project_id:
+    required: true
+    description: 'GCP project ID'
+
+runs:
+  using: "composite"
+  steps:
+
+    - name: Build and Upload polymodel package wheel
+      run: |
+        echo "Building polymodel ${{ inputs.version }} with uv..."
+        uv build polymodel/ --out-dir ./polymodel_dist/
+
+        echo "Uploading polymodel ${{ inputs.version }} to GCP Artifact Registry..."
+        uv run twine upload \
+          --repository-url https://${{ inputs.gcp_location }}-python.pkg.dev/${{ inputs.gcp_project_id }}/python-packages/ \
+          ./polymodel_dist/* --verbose
+      shell: bash

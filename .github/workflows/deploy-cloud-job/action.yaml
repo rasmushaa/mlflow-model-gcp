@@ -1,0 +1,62 @@
+name: 'Deploy Cloud Run Job'
+
+inputs:
+  env:
+    required: true
+    description: 'Target environment (dev, stg, prod)'
+  gcp_location:
+    required: true
+    description: 'GCP region/location'
+  gcp_project_id:
+    required: true
+    description: 'GCP project ID'
+  gcp_mlflow_sa_name:
+    required: true
+    description: 'GCP service account for MLflow'
+  gcp_bq_dataset:
+    required: true
+    description: 'BigQuery dataset name'
+  mlflow_tracking_uri:
+    required: true
+    description: 'MLflow tracking server URI'
+  mlflow_tracking_username:
+    required: true
+    description: 'MLflow tracking username'
+  mlflow_tracking_password:
+    required: true
+    description: 'MLflow tracking password'
+
+runs:
+  using: "composite"
+  steps:
+
+    - name: Create env-vars.yaml
+      run: |
+        cat <<EOF > env-vars.yaml
+        MLFLOW_TRACKING_URI: "${{ inputs.mlflow_tracking_uri }}"
+        MLFLOW_TRACKING_USERNAME: "${{ inputs.mlflow_tracking_username }}"
+        MLFLOW_TRACKING_PASSWORD: "${{ inputs.mlflow_tracking_password }}"
+        MLFLOW_EXPERIMENT_NAME: "${{ env.MLFLOW_EXPERIMENT_NAME }}"
+        MLFLOW_MODEL_NAME: "${{ env.MLFLOW_MODEL_NAME }}"
+        GCP_PROJECT_ID: "${{ inputs.gcp_project_id }}"
+        GCP_LOCATION: "${{ inputs.gcp_location }}"
+        GCP_BQ_DATASET: "${{ inputs.gcp_bq_dataset }}"
+        GIT_COMMIT_USERNAME: "${{ env.GIT_COMMIT_USERNAME }}"
+        GIT_COMMIT_HEAD_SHA: "${{ env.GIT_COMMIT_HEAD_SHA }}"
+        GIT_COMMIT_BRANCH: "${{ env.GIT_BRANCH }}"
+        ENV: "${{ env.ENV }}"
+        EOF
+      shell: bash
+
+    - name: Deploy Cloud Run Job
+      run: |
+        gcloud run jobs deploy banking-pipeline-${{ inputs.env }} \
+          --image "${{ env.IMAGE_URI }}" \
+          --region ${{ inputs.gcp_location }} \
+          --service-account ${{ inputs.gcp_mlflow_sa_name }} \
+          --env-vars-file env-vars.yaml \
+          --cpu 1 \
+          --memory 2000Mi \
+          --execute-now \
+          --max-retries 0
+      shell: bash

@@ -1,0 +1,25 @@
+name: 'Resolve Polymodel Version'
+
+outputs:
+  version:
+    description: 'The current version of the polymodel package as defined in pyproject.toml'
+    value: ${{ steps.polymodel_version.outputs.version }}
+
+runs:
+  using: "composite"
+  steps:
+
+    - name: Resolve current polymodel version
+      id: polymodel_version
+      run: |
+        VERSION=$(python - <<'EOF'
+        import tomllib
+
+        with open("polymodel/pyproject.toml", "rb") as f:
+            data = tomllib.load(f)
+
+        print(data["project"]["version"])
+        EOF
+        )
+        echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+        echo "Resolved current polymodel version: $VERSION"
