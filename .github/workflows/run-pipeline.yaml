@@ -52,7 +52,7 @@ on:
       - main
       - stg
   push:
-    - branches:
+    branches:
       - 'feature/*'
 
 jobs:
