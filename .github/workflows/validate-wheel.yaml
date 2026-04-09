@@ -34,6 +34,7 @@ on:
   pull_request:
     branches:
       - main
+      - stg
 
 jobs:
   validate_wheel:
