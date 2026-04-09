@@ -67,6 +67,9 @@ jobs:
       id-token: 'write' # Required for Workload Identity Federation
 
     steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
     - name: Determine environment
       id: determine-env
       run: |
@@ -79,7 +82,7 @@ jobs:
         fi
       shell: bash
 
-    # Auth GCP, Sync code, Install deps
+    # Auth GCP, Install deps
     - name: Setup environment
       uses: ./.github/workflows/setup-env
       with:
