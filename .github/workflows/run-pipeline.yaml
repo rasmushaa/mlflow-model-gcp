@@ -9,7 +9,7 @@
 # and prod_pipeline workflows.
 #
 # TRIGGER:
-# - push to dev         → Runs pipeline in dev environment
+# - push to feature/*   → Runs pipeline in dev environment
 # - PR merged to stg    → Runs pipeline in stg environment
 # - PR merged to main   → Build wheel, Runs pipeline in prod environment
 #
@@ -53,7 +53,8 @@ on:
       - stg
   push:
     branches:
-      - dev
+      - feature/*
+      - model/*
 
 jobs:
   training_pipeline:
