@@ -55,6 +55,7 @@ on:
     types: [closed]
     branches:
       - main
+      - stg
 
 jobs:
   build_wheel_and_deploy:
@@ -142,11 +143,17 @@ jobs:
     - name: Init Environment Variables
       if: startsWith(github.event.pull_request.head.ref, 'model/')
       run: |
-        echo "IMAGE_URI=${{ secrets.GCP_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mlflow-images/banking-pipeline-main:latest" >> $GITHUB_ENV
-        echo "MLFLOW_EXPERIMENT_NAME=Banking" >> $GITHUB_ENV
-        echo "MLFLOW_MODEL_NAME=BankingModel" >> $GITHUB_ENV
-        echo "GIT_BRANCH=${{ github.event.pull_request.head.ref }}" >> $GITHUB_ENV
+        if [ "${{ github.ref_name }}" == "main" ]; then
+          echo "IMAGE_URI=${{ secrets.GCP_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mlflow-images/banking-pipeline-main:latest" >> $GITHUB_ENV
+          echo "MLFLOW_EXPERIMENT_NAME=Banking-main" >> $GITHUB_ENV
+          echo "MLFLOW_MODEL_NAME=BankingModel-main" >> $GITHUB_ENV
+        else
+          echo "IMAGE_URI=${{ secrets.GCP_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mlflow-images/banking-pipeline-stg:latest" >> $GITHUB_ENV
+          echo "MLFLOW_EXPERIMENT_NAME=Banking-stg" >> $GITHUB_ENV
+          echo "MLFLOW_MODEL_NAME=BankingModel-stg" >> $GITHUB_ENV
+        fi
         echo "GIT_COMMIT_SHA=${{ github.sha }}" >> $GITHUB_ENV
+        echo "GIT_MERGE_COMMIT_SHA=${{ github.event.pull_request.head.sha }}" >> $GITHUB_ENV
         echo "GIT_COMMIT_USERNAME=${{ github.event.pull_request.user.login }}" >> $GITHUB_ENV
 
     - name: Set up Google Cloud SDK
@@ -179,7 +186,7 @@ jobs:
         GCP_LOCATION: "${{ secrets.GCP_LOCATION }}"
         GCP_BQ_DATASET: "${{ secrets.GCP_BQ_DATASET }}"
         GIT_COMMIT_USERNAME: "${{ env.GIT_COMMIT_USERNAME }}"
-        GIT_COMMIT_BRANCH: "${{ env.GIT_BRANCH }}"
+        GIT_MERGE_COMMIT_SHA: "${{ env.GIT_MERGE_COMMIT_SHA }}"
         EOF
 
     - name: Deploy and Execute Cloud Run Job

@@ -225,8 +225,8 @@ class ExperimentManager:
             ],
         )
 
-        # Register the model to the MLflow Model Registry. Todo: alias the returned version
-        _ = mlflow.register_model(
+        # Register the model to the MLflow Model Registry
+        registered_model = mlflow.register_model(
             f"models:/{logged_model.model_uri.split('/')[-1]}",
             model_name,
             tags={
@@ -235,6 +235,12 @@ class ExperimentManager:
                 "model.features": pipeline.resolved_features,
                 "model.architecture": pipeline.architecture,
             },
+        )
+
+        # Set an alias for the registered model version
+        client = mlflow.MlflowClient()
+        client.set_registered_model_alias(
+            name=model_name, alias="latest", version=registered_model.version
         )
 
     def __save_model_artifacts_to_local(self, pipeline) -> dict[str, str]:
@@ -318,8 +324,8 @@ class ExperimentManager:
             {
                 "package.version": version("polymodel"),
                 "commit.sha": os.getenv("GIT_COMMIT_SHA", "unknown"),
+                "commit.head.sha": os.getenv("GIT_MERGE_COMMIT_SHA", "unknown"),
                 "commit.user": os.getenv("GIT_COMMIT_USERNAME", "unknown"),
-                "commit.branch": os.getenv("GIT_COMMIT_BRANCH", "unknown"),
             }
         )
 
