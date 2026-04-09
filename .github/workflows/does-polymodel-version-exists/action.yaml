@@ -1,0 +1,38 @@
+name: 'Check Polymodel Version Existence on GCP Artifact Registry'
+
+inputs:
+  version:
+    required: true
+    description: 'The version of the polymodel package to check for existence in GCP Artifact Registry'
+  gcp_location:
+    required: true
+    description: 'GCP region/location'
+  gcp_project_id:
+    required: true
+    description: 'GCP project ID'
+
+outputs:
+  exists:
+    description: 'Indicates whether the current polymodel version already exists in GCP Artifact Registry'
+    value: ${{ steps.polymodel_exists.outputs.exists }}
+
+runs:
+  using: "composite"
+  steps:
+
+    - name: Check if current polymodel version exists in Artifact Registry
+      id: polymodel_exists
+      run: |
+        if gcloud artifacts versions list \
+          --package=polymodel \
+          --repository=python-packages \
+          --location=${{ inputs.gcp_location }} \
+          --project=${{ inputs.gcp_project_id }} \
+          --format="value(name)" | grep -q "${{ inputs.version }}"; then
+          echo "exists=true" >> "$GITHUB_OUTPUT"
+          echo "Version already exists on GCP Artifact Registry"
+        else
+          echo "exists=false" >> "$GITHUB_OUTPUT"
+          echo "Version does not exist on GCP Artifact Registry"
+        fi
+      shell: bash
