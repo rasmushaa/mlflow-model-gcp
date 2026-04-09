@@ -53,7 +53,7 @@ on:
       - stg
   push:
     branches:
-      - '**'  # Trigger on push to any branch (for dev environment)
+      - 'feature/*'
 
 jobs:
   training_pipeline:

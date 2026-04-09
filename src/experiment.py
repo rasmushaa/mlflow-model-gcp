@@ -232,7 +232,7 @@ class ExperimentManager:
             tags={
                 "package.version": current_version,
                 "commit.sha": os.getenv("GIT_COMMIT_SHA", "unknown"),
-                "commit.head.sha": os.getenv("GIT_MERGE_COMMIT_SHA", "unknown"),
+                "commit.head.sha": os.getenv("GIT_COMMIT_HEAD_SHA", "unknown"),
                 "model.features": pipeline.resolved_features,
                 "model.architecture": pipeline.architecture,
             },
