@@ -37,7 +37,7 @@ def __upsert_model_artifacts(model_source: str, version: str, env: str):
         )
 
         # Upload all files to GCS under model/<env>/<version>/
-        bucket = storage.Client().get_bucket("banking_model_assets")
+        bucket = storage.Client().bucket("banking_model_assets")
         local_root = Path(local_path)
         for local_file in local_root.rglob("*"):
             if local_file.is_file():
@@ -66,7 +66,7 @@ def __upload_manifest(manifest_dict: dict[str, Any]):
             tmp_path = tmp.name
 
         # Upload temp file to GCS
-        bucket = storage.Client().get_bucket("banking_model_assets")
+        bucket = storage.Client().bucket("banking_model_assets")
         blob = bucket.blob("manifest.json")
         blob.upload_from_filename(tmp_path)
 
@@ -133,7 +133,7 @@ def __get_manifest() -> dict[str, Any]:
     try:
         # Init GCS client and download manifest.json to a temp file
         client = storage.Client()
-        bucket = client.get_bucket("banking_model_assets")
+        bucket = client.bucket("banking_model_assets")
         blob = bucket.blob("manifest.json")
         with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tmp:
             blob.download_to_filename(tmp.name)

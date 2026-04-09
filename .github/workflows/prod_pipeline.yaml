@@ -154,7 +154,7 @@ jobs:
           echo "MLFLOW_MODEL_NAME=BankingModel-stg" >> $GITHUB_ENV
           echo "ENV=stg" >> $GITHUB_ENV
         fi
-        echo "GIT_BRANCH=${{ github.ref_name }}" >> $GITHUB_ENV
+        echo "GIT_COMMIT_BRANCH=${{ github.ref_name }}" >> $GITHUB_ENV
         echo "GIT_COMMIT_SHA=${{ github.sha }}" >> $GITHUB_ENV
         echo "GIT_MERGE_COMMIT_SHA=${{ github.event.pull_request.head.sha }}" >> $GITHUB_ENV
         echo "GIT_COMMIT_USERNAME=${{ github.event.pull_request.user.login }}" >> $GITHUB_ENV
@@ -190,7 +190,7 @@ jobs:
         GCP_BQ_DATASET: "${{ secrets.GCP_BQ_DATASET }}"
         GIT_COMMIT_USERNAME: "${{ env.GIT_COMMIT_USERNAME }}"
         GIT_MERGE_COMMIT_SHA: "${{ env.GIT_MERGE_COMMIT_SHA }}"
-        GIT_BRANCH: "${{ env.GIT_BRANCH }}"
+        GIT_COMMIT_BRANCH: "${{ env.GIT_COMMIT_BRANCH }}"
         ENV: "${{ env.ENV }}"
         EOF
 
@@ -212,7 +212,7 @@ jobs:
       run: |
         echo "================================================"
         echo "✅ Production Training Pipeline Deployed"
-        echo "Branch: ${{ env.GIT_BRANCH }}"
+        echo "Branch: ${{ env.GIT_COMMIT_BRANCH }}"
         echo "Commit: ${{ env.GIT_COMMIT_SHA }}"
         echo "Experiment: ${{ env.MLFLOW_EXPERIMENT_NAME }}"
         echo "Model: ${{ env.MLFLOW_MODEL_NAME }}"
