@@ -106,12 +106,12 @@ jobs:
 
     # Build new Polymodel wheel, if on main branch
     - name: Resolve Polymodel Version
-      if: github.ref_name == 'main'
+      #if: github.ref_name == 'main'
       id: resolve_polymodel_version
       uses: ./.github/workflows/resolve-polymodel-version
 
     - name: Check if Polymodel version exists on Artifact Registry
-      if: github.ref_name == 'main'
+      #if: github.ref_name == 'main'
       id: polymodel_exists
       uses: ./.github/workflows/does-polymodel-version-exists
       with:
@@ -120,7 +120,7 @@ jobs:
         gcp_project_id: ${{ secrets.GCP_PROJECT_ID }}
 
     - name: Build and Push Polymodel Wheel
-      if: github.ref_name == 'main' && steps.polymodel_exists.outputs.exists == 'false'
+      #if: github.ref_name == 'main' && steps.polymodel_exists.outputs.exists == 'false'
       uses: ./.github/workflows/build-and-push-wheel
       with:
         version: ${{ steps.resolve_polymodel_version.outputs.version }}
