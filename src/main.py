@@ -1,6 +1,8 @@
 import logging
+import os
 
 from polymodel.pipeline import Pipeline
+from src.artifactory import copy_model_artifacts_to_gcs
 from src.context import Context
 from src.debug import setup_logging
 from src.experiment import ExperimentManager
@@ -49,6 +51,9 @@ def main():
         manager.log_params(
             {f"best_hyperparams.{k}": v for k, v in results.best_params.items()}
         )
+
+    # Sync model artifacts from MLflow to GCS if new version is detected
+    copy_model_artifacts_to_gcs(env=os.environ["ENV"])
 
 
 if __name__ == "__main__":

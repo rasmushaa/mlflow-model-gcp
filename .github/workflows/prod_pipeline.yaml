@@ -147,11 +147,14 @@ jobs:
           echo "IMAGE_URI=${{ secrets.GCP_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mlflow-images/banking-pipeline-main:latest" >> $GITHUB_ENV
           echo "MLFLOW_EXPERIMENT_NAME=Banking-main" >> $GITHUB_ENV
           echo "MLFLOW_MODEL_NAME=BankingModel-main" >> $GITHUB_ENV
+          echo "ENV=prod" >> $GITHUB_ENV
         else
           echo "IMAGE_URI=${{ secrets.GCP_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mlflow-images/banking-pipeline-stg:latest" >> $GITHUB_ENV
           echo "MLFLOW_EXPERIMENT_NAME=Banking-stg" >> $GITHUB_ENV
           echo "MLFLOW_MODEL_NAME=BankingModel-stg" >> $GITHUB_ENV
+          echo "ENV=stg" >> $GITHUB_ENV
         fi
+        echo "GIT_BRANCH=${{ github.ref_name }}" >> $GITHUB_ENV
         echo "GIT_COMMIT_SHA=${{ github.sha }}" >> $GITHUB_ENV
         echo "GIT_MERGE_COMMIT_SHA=${{ github.event.pull_request.head.sha }}" >> $GITHUB_ENV
         echo "GIT_COMMIT_USERNAME=${{ github.event.pull_request.user.login }}" >> $GITHUB_ENV
@@ -187,6 +190,8 @@ jobs:
         GCP_BQ_DATASET: "${{ secrets.GCP_BQ_DATASET }}"
         GIT_COMMIT_USERNAME: "${{ env.GIT_COMMIT_USERNAME }}"
         GIT_MERGE_COMMIT_SHA: "${{ env.GIT_MERGE_COMMIT_SHA }}"
+        GIT_BRANCH: "${{ env.GIT_BRANCH }}"
+        ENV: "${{ env.ENV }}"
         EOF
 
     - name: Deploy and Execute Cloud Run Job

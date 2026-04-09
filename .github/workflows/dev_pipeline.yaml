@@ -49,17 +49,13 @@ jobs:
     steps:
     - name: Init Environment Variables
       run: |
-        # Use branch name for experiment and model naming
-        BRANCH_NAME="${{ github.ref_name }}"
-        # Sanitize branch name for use in resource names (replace / with -)
-        SANITIZED_BRANCH=$(echo "$BRANCH_NAME" | sed 's/\//-/g')
-
         echo "IMAGE_URI=${{ secrets.GCP_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mlflow-images/banking-pipeline-dev:latest" >> $GITHUB_ENV
-        echo "MLFLOW_EXPERIMENT_NAME=Banking-${SANITIZED_BRANCH}" >> $GITHUB_ENV
-        echo "MLFLOW_MODEL_NAME=BankingModel-${SANITIZED_BRANCH}" >> $GITHUB_ENV
+        echo "MLFLOW_EXPERIMENT_NAME=Banking-dev" >> $GITHUB_ENV
+        echo "MLFLOW_MODEL_NAME=BankingModel-dev" >> $GITHUB_ENV
         echo "GIT_BRANCH=${{ github.ref_name }}" >> $GITHUB_ENV
         echo "GIT_COMMIT_SHA=${{ github.sha }}" >> $GITHUB_ENV
         echo "GIT_COMMIT_USERNAME=${{ github.actor }}" >> $GITHUB_ENV
+        echo "ENV=dev" >> $GITHUB_ENV
 
     - name: Checkout code
       uses: actions/checkout@v3
@@ -111,6 +107,7 @@ jobs:
         GCP_BQ_DATASET: "${{ secrets.GCP_BQ_DATASET }}"
         GIT_COMMIT_USERNAME: "${{ env.GIT_COMMIT_USERNAME }}"
         GIT_COMMIT_BRANCH: "${{ env.GIT_BRANCH }}"
+        ENV: "${{ env.ENV }}"
         EOF
 
     - name: Deploy Cloud Run Job
