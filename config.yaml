@@ -11,16 +11,24 @@ pipeline:
     transform_mode: "inplace"
     transform_suffix: "_vec"
     hyperparams:
-      kbest: {"type": "int", "min": 50, "max": 200, "step": 5}
+      kbest: {"type": "int", "min": 50, "max": 15000, "step": 50}
+
+  naive_bayes:
+    features:
+      - "*_vec"
+    transform_mode: "inplace"
+    transform_suffix: "_nb"
+    hyperparams:
+      random_state: 42
 
   random_forest:
     features:
-      - "*_vec"
+      - "*_nb"
       - "amount"
     transform_mode: "replace"
     transform_suffix: ""
     hyperparams:
-      max_depth: {"type": "int", "min": 10, "max": 30}
+      max_depth: {"type": "int", "min": 10, "max": 50}
       n_estimators: {"type": "int", "min": 50, "max": 400, "step": 10}
       min_samples_split: {"type": "int", "min": 10, "max": 100}
       min_samples_leaf: {"type": "int", "min": 10, "max": 100}
@@ -35,7 +43,7 @@ training:
 
 # Optimization parameters
 optimization:
-  startup_jobs: 5
+  startup_jobs: 10
   max_evals: 50
   early_stop_patience: 10
   loss_metric: "f1_score_macro_mean"
