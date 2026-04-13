@@ -46,13 +46,10 @@
 name: Train and Evaluate Model
 
 on:
-  pull_request:
-    types: [closed]
+  push:
     branches:
       - main
       - stg
-  push:
-    branches:
       - 'feature/*'
 
 jobs:
