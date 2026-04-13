@@ -11,7 +11,7 @@ pipeline:
     transform_mode: "inplace"
     transform_suffix: "_vec"
     hyperparams:
-      kbest: {"type": "int", "min": 50, "max": 1100, "step": 10}
+      kbest: {"type": "int", "min": 50, "max": 200, "step": 5}
 
   random_forest:
     features:
@@ -20,8 +20,8 @@ pipeline:
     transform_mode: "replace"
     transform_suffix: ""
     hyperparams:
-      max_depth: {"type": "int", "min": 5, "max": 50}
-      n_estimators: {"type": "int", "min": 50, "max": 500, "step": 10}
+      max_depth: {"type": "int", "min": 10, "max": 30}
+      n_estimators: {"type": "int", "min": 50, "max": 400, "step": 10}
       min_samples_split: {"type": "int", "min": 10, "max": 100}
       min_samples_leaf: {"type": "int", "min": 10, "max": 100}
       criterion: {"type": "choice", "choices": ["gini", "entropy"]}
@@ -37,7 +37,7 @@ training:
 optimization:
   startup_jobs: 5
   max_evals: 50
-  early_stop_patience: 5
+  early_stop_patience: 10
   loss_metric: "f1_score_macro_mean"
   higher_is_better: true
 
