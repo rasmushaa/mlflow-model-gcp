@@ -11,7 +11,7 @@ pipeline:
     transform_mode: "inplace"
     transform_suffix: "_vec"
     hyperparams:
-      kbest: 150 #{"type": "int", "min": 50, "max": 1100, "step": 10}
+      kbest: {"type": "int", "min": 50, "max": 1100, "step": 10}
 
   random_forest:
     features:
@@ -20,11 +20,11 @@ pipeline:
     transform_mode: "replace"
     transform_suffix: ""
     hyperparams:
-      max_depth: 20 #{"type": "int", "min": 5, "max": 50}
-      n_estimators: 100 # {"type": "int", "min": 50, "max": 500, "step": 10}
-      min_samples_split: 10 # {"type": "int", "min": 10, "max": 100}
-      min_samples_leaf: 10 # {"type": "int", "min": 10, "max": 100}
-      criterion: "gini" # {"type": "choice", "choices": ["gini", "entropy"]}
+      max_depth: {"type": "int", "min": 5, "max": 50}
+      n_estimators: {"type": "int", "min": 50, "max": 500, "step": 10}
+      min_samples_split: {"type": "int", "min": 10, "max": 100}
+      min_samples_leaf: {"type": "int", "min": 10, "max": 100}
+      criterion: {"type": "choice", "choices": ["gini", "entropy"]}
       random_state: 42
 
 # Training parameters
