@@ -46,10 +46,13 @@
 name: Train and Evaluate Model
 
 on:
-  push:
+  pull_request: # Pull request trigger is needed to fetch the commit header for git metadata
+    types: [closed]
     branches:
       - main
       - stg
+  push:
+    branches:
       - 'feature/*'
 
 jobs:
